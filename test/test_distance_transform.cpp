@@ -28,17 +28,110 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <iostream>
-#include <functional>
-#include <cmath>
-#include <list>
-#include <gtest/gtest.h>
+#if 1
+    #include <gtest/gtest.h>
+#else
+    #include <doctest.h>
+    #define TEST(A, B) TEST_CASE(#A #B)
+    #define EXPECT_EQ(A, B) CHECK_EQ(A, B)
+    #define EXPECT_NE(A, B) CHECK_NE(A, B)
+    #define EXPECT_TRUE(A)  CHECK(A)
+    #define EXPECT_FALSE(A) CHECK_FALSE(A)
+#endif
+#include <xtensor/xtensor.hpp>
+#include <xvigra/distance_transform.hpp>
 
 namespace xvigra 
 {
-    TEST(distance_transform, check)
+    TEST(distance_transform, navigator)
     {
-        EXPECT_TRUE(true);
+        xt::dynamic_shape<std::size_t> shape{2,3,4};
+        {
+            navigator nav(shape, 0);
+            for(index_t k=0; k<shape[1]; ++k)
+            {
+                for(index_t i=0; i<shape[2]; ++i, ++nav)
+                {
+                    EXPECT_EQ((*nav)[0][0], 0);
+                    EXPECT_EQ((*nav)[0][1], shape[0]);
+                    EXPECT_EQ((*nav)[1][0], k);
+                    EXPECT_EQ((*nav)[1][1], 0);
+                    EXPECT_EQ((*nav)[2][0], i);
+                    EXPECT_EQ((*nav)[2][1], 0);
+                    EXPECT_TRUE(nav.has_more());
+                }
+            }
+            EXPECT_FALSE(nav.has_more());
+        }
+        {
+            navigator nav(shape, 1);
+            for(index_t k=0; k<shape[0]; ++k)
+            {
+                for(index_t i=0; i<shape[2]; ++i, ++nav)
+                {
+                    EXPECT_EQ((*nav)[0][0], k);
+                    EXPECT_EQ((*nav)[0][1], 0);
+                    EXPECT_EQ((*nav)[1][0], 0);
+                    EXPECT_EQ((*nav)[1][1], shape[1]);
+                    EXPECT_EQ((*nav)[2][0], i);
+                    EXPECT_EQ((*nav)[2][1], 0);
+                    EXPECT_TRUE(nav.has_more());
+                }
+            }
+            EXPECT_FALSE(nav.has_more());
+        }
+        {
+            navigator nav(shape, 2);
+            for(index_t k=0; k<shape[0]; ++k)
+            {
+                for(index_t i=0; i<shape[1]; ++i, ++nav)
+                {
+                    EXPECT_EQ((*nav)[0][0], k);
+                    EXPECT_EQ((*nav)[0][1], 0);
+                    EXPECT_EQ((*nav)[1][0], i);
+                    EXPECT_EQ((*nav)[1][1], 0);
+                    EXPECT_EQ((*nav)[2][0], 0);
+                    EXPECT_EQ((*nav)[2][1], shape[2]);
+                    EXPECT_TRUE(nav.has_more());
+                }
+            }
+            EXPECT_FALSE(nav.has_more());
+        }
+    }
+
+    TEST(distance_transform, 1d)
+    {
+        // input contains initial squared distances or infinity (here approximated by 10.0)
+        // output contains updated squared distances
+        xt::xtensor<double,1> in {10.0, 10.0, 10.0, 0.0, 10.0, 10.0, 10.0},
+                              res(in.shape(), 0.0),
+                              res1(in.shape(), 0.0),
+                              ref {9.0, 4.0, 1.0, 0.0, 1.0, 4.0, 9.0};
+        std::vector<double> sigmas{ 1.0};
+        detail::distance_parabola(in, res, sigmas[0]);
+        EXPECT_EQ(res, ref);
+        detail::distance_transform_impl(in, res1, sigmas, false);
+        EXPECT_EQ(res1, ref);
+    }
+
+    TEST(distance_transform, 2d)
+    {
+        // input contains initial squared distances or infinity (here approximated by 10.0)
+        // output contains updated squared distances
+        xt::xtensor<double,2> in {{ 10.0, 10.0, 10.0, 10.0, 10.0},
+                                  { 10.0, 10.0, 10.0, 10.0, 10.0},
+                                  { 10.0, 10.0,  0.0, 10.0, 10.0},
+                                  { 10.0, 10.0, 10.0, 10.0, 10.0},
+                                  { 10.0, 10.0, 10.0, 10.0, 10.0}},
+                              res(in.shape(), 0.0),
+                              ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
+                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                   { 4.0, 1.0, 0.0, 1.0, 4.0},
+                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                   { 8.0, 5.0, 4.0, 5.0, 8.0}};
+        std::vector<double> sigmas{ 1.0, 1.0 };
+        detail::distance_transform_impl(in, res, sigmas, false);
+        EXPECT_EQ(res, ref);
     }
 }
 
@@ -510,7 +603,7 @@ struct BoundaryMultiDistanceTest
         boundaryMultiDistance(vol, res, false, InterpixelBoundary);
         boundaryVectorDistance(vol, res_vec, false, InterpixelBoundary);
         res2 = norm(res_vec);
-        shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 0.25); // FIXME: check this -- 0.25 is a lot
+        shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 0.25); // FIXME: REQUIRE this -- 0.25 is a lot
             
         boundaryMultiDistance(vol, res, false, OuterBoundary);
         boundaryVectorDistance(vol, res_vec, false, OuterBoundary);
@@ -525,7 +618,7 @@ struct BoundaryMultiDistanceTest
         boundaryMultiDistance(vol, res, true, InterpixelBoundary);
         boundaryVectorDistance(vol, res_vec, true, InterpixelBoundary);
         res2 = norm(res_vec);
-        shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 0.25); // FIXME: check this -- 0.25 is a lot
+        shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 0.25); // FIXME: REQUIRE this -- 0.25 is a lot
 
         boundaryMultiDistance(vol, res, true, OuterBoundary);
         boundaryVectorDistance(vol, res_vec, true, OuterBoundary);

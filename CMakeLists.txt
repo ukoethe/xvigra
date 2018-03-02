@@ -7,6 +7,7 @@ project(xvigra VERSION 0.1 LANGUAGES CXX)
 add_library(xvigra INTERFACE)
 
 set(XVIGRA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(DOCTEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/doctest/doctest)
 
 target_include_directories(xvigra INTERFACE
   $<BUILD_INTERFACE:${XVIGRA_INCLUDE_DIR}>

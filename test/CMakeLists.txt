@@ -1,6 +1,6 @@
 # Ullrich Koethe. Copyright (C) 2018. MIT license
 
-include_directories(${XVIGRA_INCLUDE_DIR})
+include_directories(${XVIGRA_INCLUDE_DIR} ${DOCTEST_INCLUDE_DIR})
 
 find_package(gtest REQUIRED)
 

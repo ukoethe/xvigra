@@ -28,10 +28,15 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
-
-int main(int argc, char* argv[])
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+#if 1
+   #include <gtest/gtest.h>
+   
+   int main(int argc, char* argv[])
+   {
+       ::testing::InitGoogleTest(&argc, argv);
+       return RUN_ALL_TESTS();
+   }
+#else
+   #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+   #include <doctest.h>
+#endif
