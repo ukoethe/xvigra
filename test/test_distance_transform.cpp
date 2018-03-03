@@ -32,22 +32,25 @@
     #include <gtest/gtest.h>
 #else
     #include <doctest.h>
-    #define TEST(A, B) TEST_CASE(#A #B)
+    #define TEST(A, B) TEST_CASE(#A "." #B)
     #define EXPECT_EQ(A, B) CHECK_EQ(A, B)
     #define EXPECT_NE(A, B) CHECK_NE(A, B)
     #define EXPECT_TRUE(A)  CHECK(A)
     #define EXPECT_FALSE(A) CHECK_FALSE(A)
 #endif
 #include <xtensor/xtensor.hpp>
+#include <xtensor/xarray.hpp>
+#include <xtensor/xadapt.hpp>
 #include <xvigra/distance_transform.hpp>
+#include "test_distance_transform_data.hpp"
 
 namespace xvigra 
 {
-    TEST(distance_transform, navigator)
+    TEST(slicer, iteration)
     {
         xt::dynamic_shape<std::size_t> shape{2,3,4};
         {
-            navigator nav(shape, 0);
+            slicer nav(shape, 0);
             for(index_t k=0; k<shape[1]; ++k)
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
@@ -64,7 +67,7 @@ namespace xvigra
             EXPECT_FALSE(nav.has_more());
         }
         {
-            navigator nav(shape, 1);
+            slicer nav(shape, 1);
             for(index_t k=0; k<shape[0]; ++k)
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
@@ -81,7 +84,7 @@ namespace xvigra
             EXPECT_FALSE(nav.has_more());
         }
         {
-            navigator nav(shape, 2);
+            slicer nav(shape, 2);
             for(index_t k=0; k<shape[0]; ++k)
             {
                 for(index_t i=0; i<shape[1]; ++i, ++nav)
@@ -99,22 +102,22 @@ namespace xvigra
         }
     }
 
-    TEST(distance_transform, 1d)
+    TEST(distance_transform_impl, 1d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances
         xt::xtensor<double,1> in {10.0, 10.0, 10.0, 0.0, 10.0, 10.0, 10.0},
                               res(in.shape(), 0.0),
-                              res1(in.shape(), 0.0),
                               ref {9.0, 4.0, 1.0, 0.0, 1.0, 4.0, 9.0};
         std::vector<double> sigmas{ 1.0};
         detail::distance_parabola(in, res, sigmas[0]);
         EXPECT_EQ(res, ref);
-        detail::distance_transform_impl(in, res1, sigmas, false);
-        EXPECT_EQ(res1, ref);
+        res = xt::zeros<double>(in.shape()); // FIXME: there must be a simpler way
+        detail::distance_transform_impl(in, res, sigmas, false);
+        EXPECT_EQ(res, ref);
     }
 
-    TEST(distance_transform, 2d)
+    TEST(distance_transform_impl, 2d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances
@@ -133,6 +136,111 @@ namespace xvigra
         detail::distance_transform_impl(in, res, sigmas, false);
         EXPECT_EQ(res, ref);
     }
+
+    TEST(distance_transform, 2d)
+    {
+        // input contains labeled regions, with label 0 indicating the background
+        // reference contains squared distances
+        xt::xtensor<int,2> in {{ 1, 1, 1, 1, 1},
+                               { 1, 1, 1, 1, 1},
+                               { 1, 1, 0, 1, 1},
+                               { 1, 1, 1, 1, 1},
+                               { 1, 1, 1, 1, 1}};
+        xt::xtensor<double,2> res(in.shape(), 0.0),
+                              ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
+                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                   { 4.0, 1.0, 0.0, 1.0, 4.0},
+                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                   { 8.0, 5.0, 4.0, 5.0, 8.0}};
+        distance_transform_squared(in, res);
+        EXPECT_EQ(res, ref);
+        distance_transform(in, res);
+        EXPECT_TRUE(allclose(res, sqrt(ref)));
+        distance_transform_squared(1 - in, res, true);
+        EXPECT_EQ(res, ref);
+        distance_transform(1 - in, res, true);
+        EXPECT_TRUE(allclose(res, sqrt(ref)));
+    }
+
+    TEST(distance_transform, 3d)
+    {
+        using volume_t = xt::xarray<double>;
+        index_t size = 4200;
+        typename volume_t::shape_type shape{35,10,12};
+
+        auto in  = xt::adapt((double*)volume_data, size, xt::no_ownership(), shape);
+        auto ref = xt::adapt((double*)ref_dist2,   size, xt::no_ownership(), shape);
+        volume_t res(shape, 0.0);
+
+        distance_transform_squared(in, res);
+        EXPECT_EQ(res, ref);
+    }
+
+ #if 0
+    void testDistanceVolumes()
+    {    
+        DoubleVolume dt(volume.shape()), desired(volume.shape());
+        DoubleVecVolume vecDesired(volume.shape()); 
+        for(unsigned k = 0; k<pointslists.size(); ++k)
+        {
+            DoubleVolume::iterator i = desired.begin();
+            for(; i.isValid(); ++i)
+            {
+                UInt64 minDist = NumericTraits<UInt64>::max();
+                int nearest = -1;
+                for(unsigned j=0; j<pointslists[k].size(); ++j)
+                {
+                    UInt64 dist = squaredNorm(pointslists[k][j] - i.point());
+                    if(dist < minDist)
+                    {
+                        minDist = dist;
+                        nearest = j;
+                    }
+                }
+                *i = minDist;
+                vecDesired[i.point()] = pointslists[k][nearest] - i.point();
+            }
+
+            volume = 0.0;
+            for(unsigned j=0; j<pointslists[k].size(); ++j)
+                volume[pointslists[k][j]] = 1;
+
+            separableMultiDistSquared(volume, dt, true);
+            shouldEqualSequence(dt.begin(), dt.end(), desired.begin());
+
+            {
+                //test vectorial distance
+                using functor::Arg1;
+                DoubleVecVolume vecVolume(volume.shape()); 
+                separableVectorDistance(volume, vecVolume, true);
+                DoubleVolume distVolume(volume.shape());
+                transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
+                shouldEqualSequence(distVolume.begin(), distVolume.end(), desired.begin());
+                // FIXME: this test fails because the nearest point may be ambiguous
+                //shouldEqualSequence(vecVolume.begin(), vecVolume.end(), vecDesired.begin());
+            }
+        }
+
+        typedef MultiArrayShape<3>::type Shape;
+        MultiArrayView<3, double> vol(Shape(12,10,35), volume_data);
+        
+        MultiArray<3, double> res(vol.shape());
+
+        separableMultiDistSquared(vol, res, false);
+                
+        shouldEqualSequence(res.data(), res.data()+res.elementCount(), ref_dist2);
+
+        {
+            //test vectorial distance
+            using functor::Arg1;
+            DoubleVecVolume vecVolume(vol.shape()); 
+            separableVectorDistance(vol, vecVolume, false);
+            DoubleVolume distVolume(vol.shape());
+            transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
+            shouldEqualSequence(distVolume.begin(), distVolume.end(), ref_dist2);
+        }
+    }
+#endif
 }
 
 #if 0
