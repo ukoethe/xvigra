@@ -52,7 +52,7 @@ namespace xvigra
     struct rebind_container;
 
     template <class C, class T>
-    using rebind_container_t = typename rebind_container<C, T>::type;
+    using rebind_container_t = typename rebind_container<std::decay_t<C>, T>::type;
 
     template <class T, class A, class NT>
     struct rebind_container<std::vector<T, A>, NT>

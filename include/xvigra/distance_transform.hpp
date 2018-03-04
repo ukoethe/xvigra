@@ -130,7 +130,7 @@ namespace xvigra
         /***************************/
 
         template <class InArray, class OutArray, class SigmaArray>
-        void distance_transform_impl(InArray const & in, OutArray & out, 
+        void distance_transform_impl(InArray const & in, OutArray && out, 
                                      SigmaArray const & sigmas, bool invert = false)
         {
             // Sigma is the spread of the parabolas. It determines the structuring element size
@@ -140,7 +140,7 @@ namespace xvigra
             xt::dynamic_shape<std::size_t> shape(in.shape().begin(), in.shape().end());
 
             // we need the Promote type here if we want to invert the image (dilation)
-            using dest_type = typename OutArray::value_type;
+            using dest_type = typename std::decay_t<OutArray>::value_type;
             using tmp_type = xt::real_promote_type_t<dest_type>;
 
             // operate on last dimension first
@@ -261,7 +261,7 @@ namespace xvigra
 
     template <class InArray, class OutArray, class PitchArray,
               VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
-    void distance_transform_squared(InArray const & in, OutArray & out, 
+    void distance_transform_squared(InArray const & in, OutArray && out, 
                                     bool background, PitchArray const & pixel_pitch)
     {
         index_t N = in.shape().size();
@@ -277,7 +277,7 @@ namespace xvigra
             inf += sq(pixel_pitch[k]*in.shape()[k]);
         }
 
-        using out_type = typename OutArray::value_type;
+        using out_type = typename std::decay_t<OutArray>::value_type;
         if(std::is_integral<out_type>::value &&
            (pitch_is_real || inf > (double)std::numeric_limits<out_type>::max()))
         {
@@ -315,7 +315,7 @@ namespace xvigra
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
-    void distance_transform_squared(InArray const & in, OutArray & out, 
+    void distance_transform_squared(InArray const & in, OutArray && out, 
                                     bool background = false)
     {
         std::vector<double> pixel_pitch(in.shape().size(), 1.0);
@@ -332,7 +332,7 @@ namespace xvigra
     */
     template <class InArray, class OutArray, class PitchArray,
               VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
-    void distance_transform(InArray const & in, OutArray & out, 
+    void distance_transform(InArray const & in, OutArray && out, 
                             bool background, PitchArray const & pixel_pitch)
     {
         distance_transform_squared(in, out, background, pixel_pitch);
@@ -341,7 +341,7 @@ namespace xvigra
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
-    void distance_transform(InArray const & in, OutArray & out, 
+    void distance_transform(InArray const & in, OutArray && out, 
                             bool background = false)
     {
         distance_transform_squared(in, out, background);
