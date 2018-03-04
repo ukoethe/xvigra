@@ -6,7 +6,11 @@ find_package(gtest REQUIRED)
 
 set(XVIGRA_TESTS
     main.cpp
+    test_concepts.cpp
     test_distance_transform.cpp
+    test_global.cpp
+    test_math.cpp
+    test_slicer.cpp
 )
 
 add_executable(test_xvigra ${XVIGRA_TESTS})

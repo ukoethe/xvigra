@@ -32,102 +32,14 @@
 #define XVIGRA_DISTANCE_TRANSFORM_HPP
 
 #include <vector>
-#include <xtensor/xarray.hpp>
-#include <xtensor/xtensor.hpp>
 #include <xtensor/xstrided_view.hpp>
+#include "global.hpp"
+#include "concepts.hpp"
+#include "math.hpp"
+#include "slicer.hpp"
 
 namespace xvigra
 {
-    // FIXME: move the following to appropriate headers
-
-    template <class C, class T>
-    struct rebind_container;
-
-    template <class T, class NT>
-    struct rebind_container<xt::xarray<T>, NT>
-    {
-        using type = xt::xarray<NT>;
-    };
-
-    template <class T, std::size_t N, class NT>
-    struct rebind_container<xt::xtensor<T, N>, NT>
-    {
-        using type = xt::xtensor<NT, N>;
-    };
-
-    template <class C, class T>
-    using rebind_container_t = typename rebind_container<C, T>::type;
-
-    #define VIGRA_REQUIRE class = std::enable_if_t
-
-    template <class T>
-    struct tensor_like
-    : public xt::is_xexpression<T>
-    {};
-
-    using index_t = std::ptrdiff_t;
-
-    template <class T>
-    T sq(T t)
-    {
-        return t*t;
-    }
-
-    /**********/
-    /* slicer */
-    /**********/
-
-    class slicer
-    {
-        // FIXME: support C- and F-order, higher dimensional slices
-      public:
-        using shape_type = xt::dynamic_shape<std::size_t>;
-        
-        slicer(shape_type const & shape, index_t skip_axis)
-        : shape_(shape)
-        , slice_(shape)
-        {
-            shape_[skip_axis] = 1;
-            for(index_t k=0; k < shape.size(); ++k)
-            {
-                if(k == skip_axis)
-                {
-                    slice_.push_back(xt::all());
-                }
-                else
-                {
-                    slice_.push_back(0);
-                }
-            }
-        }
-
-        xt::slice_vector const & operator*() const
-        {
-            return slice_;
-        }
-
-        void operator++()
-        {
-            index_t k = shape_.size() - 1;
-            ++slice_[k][0];
-            while(slice_[k][0] == shape_[k] && k > 0)
-            {
-                slice_[k][0] = 0;
-                --k;
-                ++slice_[k][0];
-            }
-        }
-
-        bool has_more() const
-        {
-            return slice_[0][0] != shape_[0];
-        }
-
-      private:
-        shape_type shape_;
-        xt::slice_vector slice_;
-    };
-
     namespace detail
     {
 
