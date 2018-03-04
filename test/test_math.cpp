@@ -39,4 +39,12 @@ namespace xvigra
         EXPECT_EQ(sq(1.5), 2.25);
         EXPECT_EQ(sq(-1.5), 2.25);
     }
+
+    TEST(math, norm)
+    {
+        std::vector<int> v {3, 4, 5};
+        std::array<int, 3> a {3, 4, 5};
+        EXPECT_EQ(norm_sq(v), 50);
+        EXPECT_EQ(norm_sq(a), 50);
+    }
 } // namespace xvigra

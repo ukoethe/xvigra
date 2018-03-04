@@ -35,6 +35,7 @@
 #include <vector>
 #include <array>
 #include <xtensor/xtensor_forward.hpp>
+#include <xtensor/xutils.hpp>
 
 namespace xvigra
 {
@@ -78,6 +79,23 @@ namespace xvigra
     {
         using type = xt::xtensor<NT, N, L>;
     };
+
+    /********************/
+    /* conditional cast */
+    /********************/
+
+    using xt::conditional_cast;
+
+    /******************/
+    /* type promotion */
+    /******************/
+
+    using xt::promote_type_t;
+    using xt::big_promote_type_t;
+    using xt::real_promote_type_t;
+    using xt::bool_promote_type_t;
+    using xt::norm_type_t;
+    using xt::squared_norm_type_t;
 }
 
 #endif // XVIGRA_GLOBAL_HPP

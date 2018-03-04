@@ -32,16 +32,57 @@
 #define XVIGRA_MATH_HPP
 
 #include <cmath>
+#include <xtensor/xnorm.hpp> // FIXME: includes lots of things
+#include "global.hpp"
 
 namespace xvigra
 {
+    /******/
+    /* sq */
+	/******/
+
     template <class T>
     inline T sq(T t)
     {
         return t*t;
     }
 
-    
+    /*********/
+    /* norms */
+	/*********/
+
+    using xt::norm_lp;
+    using xt::norm_lp_to_p;
+    using xt::norm_l0;
+    using xt::norm_l1;
+    using xt::norm_l2;
+    using xt::norm_linf;
+    using xt::norm_sq;
+
+    template <class T, class A>
+    auto norm_sq(std::vector<T, A> const & v)
+    {
+    	using result_type = squared_norm_type_t<std::vector<T, A>>;
+    	result_type res = result_type();
+    	for(auto u: v)
+    	{
+    		res += norm_sq(u);
+    	}
+    	return res;
+    }
+
+    template <class T, std::size_t N>
+    auto norm_sq(std::array<T, N> const & v)
+    {
+    	using result_type = squared_norm_type_t<std::array<T, N>>;
+    	result_type res = result_type();
+    	for(auto u: v)
+    	{
+    		res += norm_sq(u);
+    	}
+    	return res;
+    }
+
 } // namespace xvigra
 
 #endif // XVIGRA_MATH_HPP
