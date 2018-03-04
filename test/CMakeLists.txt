@@ -11,6 +11,7 @@ set(XVIGRA_TESTS
     test_error.cpp
     test_global.cpp
     test_math.cpp
+    test_morphology.cpp
     test_slicer.cpp
 )
 

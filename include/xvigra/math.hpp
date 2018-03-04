@@ -60,7 +60,7 @@ namespace xvigra
     using xt::norm_sq;
 
     template <class T, class A>
-    auto norm_sq(std::vector<T, A> const & v)
+    inline auto norm_sq(std::vector<T, A> const & v)
     {
     	using result_type = squared_norm_type_t<std::vector<T, A>>;
     	result_type res = result_type();
@@ -71,8 +71,20 @@ namespace xvigra
     	return res;
     }
 
+    template <class T, class A>
+    inline auto norm_linf(std::vector<T, A> const & v)
+    {
+    	using result_type = decltype(norm_linf(v[0]));
+    	result_type res = result_type();
+    	for(auto u: v)
+    	{
+    		res = std::max(res, norm_linf(u));
+    	}
+    	return res;
+    }
+
     template <class T, std::size_t N>
-    auto norm_sq(std::array<T, N> const & v)
+    inline auto norm_sq(std::array<T, N> const & v)
     {
     	using result_type = squared_norm_type_t<std::array<T, N>>;
     	result_type res = result_type();
@@ -81,6 +93,18 @@ namespace xvigra
     		res += norm_sq(u);
     	}
     	return res;
+    }
+
+    template <class T, std::size_t N>
+    inline auto norm_linf(std::array<T, N> const & v)
+    {
+    	using result_type = decltype(norm_linf(v[0]));
+    	result_type res = result_type();
+    	for(auto u: v)
+    	{
+    		res = std::max(res, norm_linf(u));
+    	}
+   		return res;
     }
 
 } // namespace xvigra

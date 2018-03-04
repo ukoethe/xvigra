@@ -42,9 +42,11 @@ namespace xvigra
 
     TEST(math, norm)
     {
-        std::vector<int> v {3, 4, 5};
-        std::array<int, 3> a {3, 4, 5};
+        std::vector<int> v {3, 4, -5};
+        std::array<int, 3> a {3, 4, -5};
         EXPECT_EQ(norm_sq(v), 50);
+        EXPECT_EQ(norm_linf(v), 5);
         EXPECT_EQ(norm_sq(a), 50);
+        EXPECT_EQ(norm_linf(a), 5);
     }
 } // namespace xvigra
