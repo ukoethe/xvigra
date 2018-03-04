@@ -8,6 +8,7 @@ set(XVIGRA_TESTS
     main.cpp
     test_concepts.cpp
     test_distance_transform.cpp
+    test_error.cpp
     test_global.cpp
     test_math.cpp
     test_slicer.cpp
