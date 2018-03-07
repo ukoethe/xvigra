@@ -28,7 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
+#include "unittest.hpp"
 #include <xvigra/slicer.hpp>
 
 namespace xvigra 

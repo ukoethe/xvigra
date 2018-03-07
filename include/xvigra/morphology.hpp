@@ -64,7 +64,6 @@ namespace xvigra
 		            background = dilation 
 		                            ? 1
 		                            : 0;
-		        // out = where(greater(tmp, radius2), foreground, background);
 		        out = where(tmp > radius2, foreground, background);
 		    }
 		};
@@ -87,7 +86,6 @@ namespace xvigra
 		            background = dilation 
 		                            ? 1
 		                            : 0;
-		        // out = where(greater(out, radius2), foreground, background);
 		        out = where(out > radius2, foreground, background);
 		    }
 		};
@@ -115,11 +113,10 @@ namespace xvigra
 	*/
 	//@{
 
-	/********************************************************/
-	/*                                                      */
-	/*             multiBinaryErosion                       */
-	/*                                                      */
-	/********************************************************/
+    /******************/
+    /* binary_erosion */
+    /******************/
+
 	/** \brief Binary erosion on multi-dimensional arrays.
 
 	    This function applies a flat circular erosion operator with a given radius. The
@@ -214,11 +211,9 @@ namespace xvigra
 	}
 
 
-	/********************************************************/
-	/*                                                      */
-	/*             multiBinaryDilation                      */
-	/*                                                      */
-	/********************************************************/
+    /*******************/
+    /* binary_dilation */
+    /*******************/
 
 	/** \brief Binary dilation on multi-dimensional arrays.
 
@@ -313,6 +308,10 @@ namespace xvigra
 	    }
 	}
 
+    /******************/
+    /* binary_opening */
+    /******************/
+
 	template <class InArray, class OutArray,
 	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
 	void
@@ -334,6 +333,10 @@ namespace xvigra
 	        detail::binary_morphology_impl<dest_type, dest_type>::exec(out, out, radius, true);
 	    }
 	}
+
+    /******************/
+    /* binary_closing */
+    /******************/
 
 	template <class InArray, class OutArray,
 	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
@@ -357,11 +360,10 @@ namespace xvigra
 	    }
 	}
 
-	/********************************************************/
-	/*                                                      */
-	/*             multiGrayscaleErosion                    */
-	/*                                                      */
-	/********************************************************/
+    /*********************/
+    /* grayscale_erosion */
+    /*********************/
+
 	/** \brief Parabolic grayscale erosion on multi-dimensional arrays.
 
 	    This function applies a parabolic erosion operator with a given spread (sigma) on
@@ -433,212 +435,126 @@ namespace xvigra
 	*/
 	// doxygen_overloaded_function(template <...> void multiGrayscaleErosion)
 
-	// template <class InArray, class OutArray,
-	//           VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
-	// void
-	// grayscale_erosion(InArray const & in, OutArray && out, double sigma)
-	// {
-	//     typedef typename NumericTraits<typename DestAccessor::value_type>::ValueType DestType;
-	//     typedef typename NumericTraits<typename DestAccessor::value_type>::Promote TmpType;
-	//     DestType MaxValue = NumericTraits<DestType>::max();
-	//     enum { N = 1 + SrcIterator::level };
+	template <class InArray, class OutArray,
+	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	void
+	grayscale_erosion(InArray const & in, OutArray && out, double sigma)
+	{
+		std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+		detail::distance_transform_impl(in, out, pixel_pitch);
+	}
+
+    /**********************/
+    /* grayscale_dilation */
+    /**********************/
+
+	/** \brief Parabolic grayscale dilation on multi-dimensional arrays.
+
+	    This function applies a parabolic dilation operator with a given spread (sigma) on
+	    a grayscale array. The operation is isotropic.
+	    The input is a grayscale multi-dimensional array.
 	    
-	//     // temporary array to hold the current line to enable in-place operation
-	//     ArrayVector<TmpType> tmp( shape[0] );
-	        
-	//     int MaxDim = 0; 
-	//     for( int i=0; i<N; i++)
-	//         if(MaxDim < shape[i]) MaxDim = shape[i];
-	    
-	//     using namespace vigra::functor;
-	    
-	//     ArrayVector<double> sigmas(shape.size(), sigma);
-	    
-	//     // Allocate a new temporary array if the distances squared wouldn't fit
-	//     if(N*MaxDim*MaxDim > MaxValue)
-	//     {
-	//         MultiArray<SrcShape::static_size, TmpType> tmpArray(shape);
-
-	//         detail::internalSeparableMultiArrayDistTmp( s, shape, src, tmpArray.traverser_begin(),
-	//             typename AccessorTraits<TmpType>::default_accessor(), sigmas );
-	        
-	//         transformMultiArray( tmpArray.traverser_begin(), shape,
-	//                 typename AccessorTraits<TmpType>::default_accessor(), d, dest,
-	//                 ifThenElse( Arg1() > Param(MaxValue), Param(MaxValue), Arg1() ) );
-	//         //copyMultiArray( tmpArray.traverser_begin(), shape,
-	//         //        typename AccessorTraits<TmpType>::default_accessor(), d, dest );
-	//     }
-	//     else
-	//     {
-	//         detail::internalSeparableMultiArrayDistTmp( s, shape, src, d, dest, sigmas );
-	//     }
-
-	// }
-
-	// template <class SrcIterator, class SrcShape, class SrcAccessor,
-	//           class DestIterator, class DestAccessor>
-	// inline void
-	// multiGrayscaleErosion(triple<SrcIterator, SrcShape, SrcAccessor> const & source,
-	//                       pair<DestIterator, DestAccessor> const & dest, double sigma)
-	// {
-	//     multiGrayscaleErosion( source.first, source.second, source.third, 
-	//                            dest.first, dest.second, sigma);
-	// }
-
-	// template <unsigned int N, class T1, class S1,
-	//                           class T2, class S2>
-	// inline void
-	// multiGrayscaleErosion(MultiArrayView<N, T1, S1> const & source,
-	//                       MultiArrayView<N, T2, S2> dest, 
-	//                       double sigma)
-	// {
-	//     vigra_precondition(source.shape() == dest.shape(),
-	//         "multiGrayscaleErosion(): shape mismatch between input and output.");
-	//     multiGrayscaleErosion( srcMultiArrayRange(source), 
-	//                            destMultiArray(dest), sigma);
-	// }
-
-	// /********************************************************/
-	// /*                                                      */
-	// /*             multiGrayscaleDilation                   */
-	// /*                                                      */
-	// /********************************************************/
-	// /** \brief Parabolic grayscale dilation on multi-dimensional arrays.
-
-	//     This function applies a parabolic dilation operator with a given spread (sigma) on
-	//     a grayscale array. The operation is isotropic.
-	//     The input is a grayscale multi-dimensional array.
-	    
-	//     This function may work in-place, which means that <tt>siter == diter</tt> is allowed.
-	//     A full-sized internal array is only allocated if working on the destination
-	//     array directly would cause overflow errors (i.e. if
-	//     <tt> typeid(typename DestAccessor::value_type) < N * M*M</tt>, where M is the
-	//     size of the largest dimension of the array.
+	    This function may work in-place, which means that <tt>siter == diter</tt> is allowed.
+	    A full-sized internal array is only allocated if working on the destination
+	    array directly would cause overflow errors (i.e. if
+	    <tt> typeid(typename DestAccessor::value_type) < N * M*M</tt>, where M is the
+	    size of the largest dimension of the array.
 	           
-	//     <b> Declarations:</b>
+	    <b> Declarations:</b>
 
-	//     pass arbitrary-dimensional array views:
-	//     \code
-	//     namespace vigra {
-	//         template <unsigned int N, class T1, class S1,
-	//                                   class T2, class S2>
-	//         void
-	//         multiGrayscaleDilation(MultiArrayView<N, T1, S1> const & source,
-	//                                MultiArrayView<N, T2, S2> dest,
-	//                                double sigma);
-	//     }
-	//     \endcode
+	    pass arbitrary-dimensional array views:
+	    \code
+	    namespace vigra {
+	        template <unsigned int N, class T1, class S1,
+	                                  class T2, class S2>
+	        void
+	        multiGrayscaleDilation(MultiArrayView<N, T1, S1> const & source,
+	                               MultiArrayView<N, T2, S2> dest,
+	                               double sigma);
+	    }
+	    \endcode
 
-	//     \deprecatedAPI{multiGrayscaleDilation}
-	//     pass \ref MultiIteratorPage "MultiIterators" and \ref DataAccessors :
-	//     \code
-	//     namespace vigra {
-	//         template <class SrcIterator, class SrcShape, class SrcAccessor,
-	//                   class DestIterator, class DestAccessor>
-	//         void
-	//         multiGrayscaleDilation(SrcIterator siter, SrcShape const & shape, SrcAccessor src,
-	//                                     DestIterator diter, DestAccessor dest, double sigma);
+	    \deprecatedAPI{multiGrayscaleDilation}
+	    pass \ref MultiIteratorPage "MultiIterators" and \ref DataAccessors :
+	    \code
+	    namespace vigra {
+	        template <class SrcIterator, class SrcShape, class SrcAccessor,
+	                  class DestIterator, class DestAccessor>
+	        void
+	        multiGrayscaleDilation(SrcIterator siter, SrcShape const & shape, SrcAccessor src,
+	                                    DestIterator diter, DestAccessor dest, double sigma);
 
-	//     }
-	//     \endcode
-	//     use argument objects in conjunction with \ref ArgumentObjectFactories :
-	//     \code
-	//     namespace vigra {
-	//         template <class SrcIterator, class SrcShape, class SrcAccessor,
-	//                   class DestIterator, class DestAccessor>
-	//         void
-	//         multiGrayscaleDilation(triple<SrcIterator, SrcShape, SrcAccessor> const & source,
-	//                                     pair<DestIterator, DestAccessor> const & dest, 
-	//                                     double sigma);
+	    }
+	    \endcode
+	    use argument objects in conjunction with \ref ArgumentObjectFactories :
+	    \code
+	    namespace vigra {
+	        template <class SrcIterator, class SrcShape, class SrcAccessor,
+	                  class DestIterator, class DestAccessor>
+	        void
+	        multiGrayscaleDilation(triple<SrcIterator, SrcShape, SrcAccessor> const & source,
+	                                    pair<DestIterator, DestAccessor> const & dest, 
+	                                    double sigma);
 
-	//     }
-	//     \endcode
-	//     \deprecatedEnd
+	    }
+	    \endcode
+	    \deprecatedEnd
 
-	//     <b> Usage:</b>
+	    <b> Usage:</b>
 
-	//     <b>\#include</b> \<vigra/multi_morphology.hxx\><br/>
-	//     Namespace: vigra
+	    <b>\#include</b> \<vigra/multi_morphology.hxx\><br/>
+	    Namespace: vigra
 
-	//     \code
-	//     Shape3 shape(width, height, depth);
-	//     MultiArray<3, unsigned char> source(shape);
-	//     MultiArray<3, unsigned char> dest(shape);
-	//     ...
+	    \code
+	    Shape3 shape(width, height, depth);
+	    MultiArray<3, unsigned char> source(shape);
+	    MultiArray<3, unsigned char> dest(shape);
+	    ...
 
-	//     // perform isotropic grayscale erosion
-	//     multiGrayscaleDilation(source, dest, 3.0);
-	//     \endcode
+	    // perform isotropic grayscale erosion
+	    multiGrayscaleDilation(source, dest, 3.0);
+	    \endcode
 
-	//     \see vigra::discDilation(), vigra::multiBinaryDilation()
-	// */
+	    \see vigra::discDilation(), vigra::multiBinaryDilation()
+	*/
 	// doxygen_overloaded_function(template <...> void multiGrayscaleDilation)
 
-	// template <class SrcIterator, class SrcShape, class SrcAccessor,
-	//           class DestIterator, class DestAccessor>
-	// void multiGrayscaleDilation( SrcIterator s, SrcShape const & shape, SrcAccessor src,
-	//                              DestIterator d, DestAccessor dest, double sigma)
-	// {
-	//     typedef typename NumericTraits<typename DestAccessor::value_type>::ValueType DestType;
-	//     typedef typename NumericTraits<typename DestAccessor::value_type>::Promote TmpType;
-	//     DestType MinValue = NumericTraits<DestType>::min();
-	//     DestType MaxValue = NumericTraits<DestType>::max();
-	//     enum { N = 1 + SrcIterator::level };
-	        
-	//     // temporary array to hold the current line to enable in-place operation
-	//     ArrayVector<TmpType> tmp( shape[0] );
-	    
-	//     int MaxDim = 0; 
-	//     for( int i=0; i<N; i++)
-	//         if(MaxDim < shape[i]) MaxDim = shape[i];
-	    
-	//     using namespace vigra::functor;
+	template <class InArray, class OutArray,
+	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	void
+	grayscale_dilation(InArray const & in, OutArray && out, double sigma)
+	{
+		std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+		detail::distance_transform_impl(in, out, pixel_pitch, true);
+	}
 
-	//     ArrayVector<double> sigmas(shape.size(), sigma);
+    /*********************/
+    /* grayscale_opening */
+    /*********************/
 
-	//     // Allocate a new temporary array if the distances squared wouldn't fit
-	//     if(-N*MaxDim*MaxDim < MinValue || N*MaxDim*MaxDim > MaxValue)
-	//     {
-	//         MultiArray<SrcShape::static_size, TmpType> tmpArray(shape);
+	template <class InArray, class OutArray,
+	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	void
+	grayscale_opening(InArray const & in, OutArray && out, double sigma)
+	{
+		std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+		detail::distance_transform_impl(in, out, pixel_pitch, false);
+		detail::distance_transform_impl(out, out, pixel_pitch, true);
+	}
 
-	//         detail::internalSeparableMultiArrayDistTmp( s, shape, src, tmpArray.traverser_begin(),
-	//             typename AccessorTraits<TmpType>::default_accessor(), sigmas, true );
-	        
-	//         transformMultiArray( tmpArray.traverser_begin(), shape,
-	//                 typename AccessorTraits<TmpType>::default_accessor(), d, dest,
-	//                 ifThenElse( Arg1() > Param(MaxValue), Param(MaxValue), 
-	//                     ifThenElse( Arg1() < Param(MinValue), Param(MinValue), Arg1() ) ) );
-	//     }
-	//     else
-	//     {
-	//         detail::internalSeparableMultiArrayDistTmp( s, shape, src, d, dest, sigmas, true );
-	//     }
+    /*********************/
+    /* grayscale_closing */
+    /*********************/
 
-	// }
-
-	// template <class SrcIterator, class SrcShape, class SrcAccessor,
-	//           class DestIterator, class DestAccessor>
-	// inline void
-	// multiGrayscaleDilation(triple<SrcIterator, SrcShape, SrcAccessor> const & source,
-	//                        pair<DestIterator, DestAccessor> const & dest, double sigma)
-	// {
-	//     multiGrayscaleDilation( source.first, source.second, source.third, 
-	//                             dest.first, dest.second, sigma);
-	// }
-
-	// template <unsigned int N, class T1, class S1,
-	//                           class T2, class S2>
-	// inline void
-	// multiGrayscaleDilation(MultiArrayView<N, T1, S1> const & source,
-	//                        MultiArrayView<N, T2, S2> dest,
-	//                        double sigma)
-	// {
-	//     vigra_precondition(source.shape() == dest.shape(),
-	//         "multiGrayscaleDilation(): shape mismatch between input and output.");
-	//     multiGrayscaleDilation( srcMultiArrayRange(source), 
-	//                             destMultiArray(dest), sigma);
-	// }
-
+	template <class InArray, class OutArray,
+	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	void
+	grayscale_closing(InArray const & in, OutArray && out, double sigma)
+	{
+		std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+		detail::distance_transform_impl(in, out, pixel_pitch, true);
+		detail::distance_transform_impl(out, out, pixel_pitch, false);
+	}
 //@}
 
 } // namespace xvigra

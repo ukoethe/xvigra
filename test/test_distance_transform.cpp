@@ -28,16 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#if 1
-    #include <gtest/gtest.h>
-#else
-    #include <doctest.h>
-    #define TEST(A, B) TEST_CASE(#A "." #B)
-    #define EXPECT_EQ(A, B) CHECK_EQ(A, B)
-    #define EXPECT_NE(A, B) CHECK_NE(A, B)
-    #define EXPECT_TRUE(A)  CHECK(A)
-    #define EXPECT_FALSE(A) CHECK_FALSE(A)
-#endif
+#include "unittest.hpp"
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xarray.hpp>
 #include <xtensor/xadapt.hpp>
@@ -46,7 +37,7 @@
 
 namespace xvigra 
 {
-    TEST(distance_transform_impl, 1d)
+    TEST(distance_transform, impl_1d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances
@@ -61,7 +52,7 @@ namespace xvigra
         EXPECT_EQ(res, ref);
     }
 
-    TEST(distance_transform_impl, 2d)
+    TEST(distance_transform, impl_2d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances

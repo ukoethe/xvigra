@@ -28,7 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
+#include "unittest.hpp"
 #include <xvigra/error.hpp>
 
 namespace xvigra

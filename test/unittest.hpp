@@ -28,25 +28,21 @@
 /*                                                                      */
 /************************************************************************/
 
-#include "unittest.hpp"
-#include <xvigra/math.hpp>
+#ifndef XVIGRA_UNITTEST_HPP
+#define XVIGRA_UNITTEST_HPP
 
-namespace xvigra 
-{
-    TEST(math, functions)
-    {
-        EXPECT_EQ(sq(2), 4);
-        EXPECT_EQ(sq(1.5), 2.25);
-        EXPECT_EQ(sq(-1.5), 2.25);
-    }
+#include <xtensor/xio.hpp>
 
-    TEST(math, norm)
-    {
-        std::vector<int> v {3, 4, -5};
-        std::array<int, 3> a {3, 4, -5};
-        EXPECT_EQ(norm_sq(v), 50);
-        EXPECT_EQ(norm_linf(v), 5);
-        EXPECT_EQ(norm_sq(a), 50);
-        EXPECT_EQ(norm_linf(a), 5);
-    }
-} // namespace xvigra
+#ifndef XVIGRA_USE_DOCTEST
+    #include <gtest/gtest.h>
+#else
+    #include <doctest.h>
+    #define TEST(A, B) TEST_CASE(#A "." #B)
+    #define EXPECT_EQ(A, B) CHECK_EQ(A, B)
+    #define EXPECT_NE(A, B) CHECK_NE(A, B)
+    #define EXPECT_TRUE(A)  CHECK(A)
+    #define EXPECT_FALSE(A) CHECK_FALSE(A)
+    #define EXPECT_THROW(A, B) CHECK_THROWS_AS(A, B)
+#endif
+
+#endif // XVIGRA_UNITTEST_HPP

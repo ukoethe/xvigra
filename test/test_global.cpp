@@ -28,7 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
+#include "unittest.hpp"
 #include <xvigra/global.hpp>
 #include <limits>
 #include <type_traits>

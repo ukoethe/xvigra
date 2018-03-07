@@ -28,18 +28,18 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
+#include "unittest.hpp"
 #include <xtensor/xtensor.hpp>
 #include <xvigra/morphology.hpp>
 
 xt::xtensor<std::uint8_t, 2> 
-    img1 {{0, 1, 1, 1, 1, 1, 0},
+    img1 {{0, 0, 0, 0, 0, 0, 0},
           {0, 1, 1, 1, 1, 1, 0},
           {0, 1, 1, 1, 1, 1, 0},
           {0, 1, 1, 1, 1, 1, 0},
           {0, 1, 1, 1, 1, 1, 0},
           {0, 1, 1, 1, 1, 1, 0},
-          {0, 1, 1, 1, 1, 1, 0}},
+          {0, 0, 0, 0, 0, 0, 0}},
     img2 {{0, 1, 2, 3, 4, 5, 6},
           {0, 1, 2, 3, 4, 5, 6},
           {0, 1, 2, 3, 4, 5, 6},
@@ -84,13 +84,13 @@ namespace xvigra
     TEST(morphology, 2d_binary)
     {
 		xt::xtensor<std::uint8_t, 2> out(img1.shape()),
-		    ref1 {{0, 0, 0, 1, 0, 0, 0},
+		    ref1 {{0, 0, 0, 0, 0, 0, 0},
+			      {0, 0, 0, 0, 0, 0, 0},
+			      {0, 0, 0, 0, 0, 0, 0},
 			      {0, 0, 0, 1, 0, 0, 0},
-			      {0, 0, 0, 1, 0, 0, 0},
-			      {0, 0, 0, 1, 0, 0, 0},
-			      {0, 0, 0, 1, 0, 0, 0},
-			      {0, 0, 0, 1, 0, 0, 0},
-			      {0, 0, 0, 1, 0, 0, 0}},
+			      {0, 0, 0, 0, 0, 0, 0},
+			      {0, 0, 0, 0, 0, 0, 0},
+			      {0, 0, 0, 0, 0, 0, 0}},
 			ref2 {{0, 0, 0, 1, 1, 1, 1},
                   {0, 0, 0, 1, 1, 1, 1},
                   {0, 0, 0, 1, 1, 1, 1},
@@ -101,13 +101,13 @@ namespace xvigra
 
 		binary_erosion(img1, out, 2);
 		EXPECT_EQ(out, ref1);
-		binary_dilation(out, out, 2);
+		binary_dilation(out, out, 2.9);
 		EXPECT_EQ(out, img1);
 		binary_erosion(img2, out, 2);
 		EXPECT_EQ(out, ref2);
 		binary_dilation(out, out, 2);
 		EXPECT_EQ(out, not_equal(img2, 0));
-		binary_opening(img1, out, 2);
+		binary_opening(img1, out, 2.9);
 		EXPECT_EQ(out, img1);
 		binary_opening(ref1, out, 2);
 		EXPECT_FALSE(any(out));
@@ -186,6 +186,53 @@ namespace xvigra
 		EXPECT_EQ(out, ref2);
 		binary_dilation(ref1, out, 1.9);
 		EXPECT_EQ(out, vol);
+    }
+
+    TEST(morphology, 2d_gray)
+    {
+    	xt::xtensor<uint8_t, 2> img(8*img1),
+    	    res(img.shape(), 0),
+    	    ref_e1 {{0, 0, 0, 0, 0, 0, 0},
+                    {0, 1, 1, 1, 1, 1, 0},
+                    {0, 1, 4, 4, 4, 1, 0},
+                    {0, 1, 4, 8, 4, 1, 0},
+                    {0, 1, 4, 4, 4, 1, 0},
+                    {0, 1, 1, 1, 1, 1, 0},
+                    {0, 0, 0, 0, 0, 0, 0}},
+            ref_e2 {{0, 0, 0, 0, 0, 0, 0},
+                    {0, 0, 0, 0, 0, 0, 0},
+                    {0, 0, 1, 1, 1, 0, 0},
+                    {0, 0, 1, 2, 1, 0, 0},
+                    {0, 0, 1, 1, 1, 0, 0},
+                    {0, 0, 0, 0, 0, 0, 0},
+                    {0, 0, 0, 0, 0, 0, 0}},
+            ref_o1 {{0, 0, 0, 0, 0, 0, 0},
+                    {0, 2, 3, 4, 3, 2, 0},
+                    {0, 3, 6, 7, 6, 3, 0},
+                    {0, 4, 7, 8, 7, 4, 0},
+                    {0, 3, 6, 7, 6, 3, 0},
+                    {0, 2, 3, 4, 3, 2, 0},
+                    {0, 0, 0, 0, 0, 0, 0}},
+            ref_c1 {{0, 1, 2, 3, 2, 1, 0},
+                    {1, 2, 3, 4, 3, 2, 1},
+                    {2, 3, 6, 7, 6, 3, 2},
+                    {3, 4, 7, 8, 7, 4, 3},
+                    {2, 3, 6, 7, 6, 3, 2},
+                    {1, 2, 3, 4, 3, 2, 1},
+                    {0, 1, 2, 3, 2, 1, 0}};
+
+    	grayscale_erosion(img, res, 2);
+    	EXPECT_EQ(res, ref_e2);
+
+    	grayscale_erosion(img, res, 1);
+    	EXPECT_EQ(res, ref_e1);
+     	grayscale_dilation(res, res, 1);
+    	EXPECT_EQ(res, ref_o1);
+
+     	grayscale_opening(img, res, 1);
+    	EXPECT_EQ(res, ref_o1);
+    	grayscale_closing(res, res, 1);
+    	EXPECT_EQ(res, ref_c1);
     }
 
 } // namespace xvigra

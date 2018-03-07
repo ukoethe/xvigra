@@ -58,10 +58,12 @@ namespace xvigra
         /* distance_parabola */
         /*********************/
 
-        // input contains initial squared distances or infinity (approximated by a large number)
-        // output contains updated squared distances
+        // 'in' contains initial squared distances or infinity (approximated by a large number).
+        // 'out' will contain updated squared distances.
+        // When 'invert=true', the parabolas open downwards (needed for dilation), otherwise 
+        // upwards (needed for distance transform and erosion)
         template <class InArray, class OutArray>
-        void distance_parabola(InArray const & in, OutArray && out, double sigma )
+        void distance_parabola(InArray const & in, OutArray && out, double sigma, bool invert=false)
         {
             // we assume that the data in the input is distance squared and treat it as such
             double w = in.shape()[0];
@@ -69,13 +71,17 @@ namespace xvigra
                 return;
 
             double sigma2 = sq(sigma);
+            if(invert)
+            {
+                sigma2 = -sigma2;
+            }
             double sigma22 = 2.0 * sigma2;
 
             using src_type = typename InArray::value_type;
             using influence = distance_parabola_stack_entry<src_type>;
 
             std::vector<influence> _stack;
-            _stack.push_back(influence(in[0], 0.0, 0.0, w));
+            _stack.push_back(influence(in(0), 0.0, 0.0, w));
 
             index_t k = 1;
             for(double current = 1.0; current < w; ++current, ++k)
@@ -148,17 +154,9 @@ namespace xvigra
             {
                 // First copy source for better cache locality (FIXME: check this!).
                 // Invert the values if necessary (only needed for grayscale morphology).
-                xt::xtensor<tmp_type, 1> tmp;
-                if(invert)
-                {
-                    tmp = -xt::dynamic_view(in, *nav);
-                }
-                else
-                {
-                    tmp = xt::dynamic_view(in, *nav);
-                }
+                xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(in, *nav);
 
-                distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[N-1]);
+                distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[N-1], invert);
             }
 
             // operate on further dimensions
@@ -168,13 +166,8 @@ namespace xvigra
                 {
                     xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(out, *nav);
 
-                    distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[d]);
+                    distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[d], invert);
                 }
-            }
-
-            if(invert)
-            {    
-                out = -out;
             }
         }
 
@@ -278,8 +271,9 @@ namespace xvigra
         }
 
         using out_type = typename std::decay_t<OutArray>::value_type;
-        if(std::is_integral<out_type>::value &&
-           (pitch_is_real || inf > (double)std::numeric_limits<out_type>::max()))
+        auto lowest  = std::numeric_limits<out_type>::lowest(),
+             highest = std::numeric_limits<out_type>::max();
+        if(std::is_integral<out_type>::value && (pitch_is_real || inf > (double)highest))
         {
             // work on a real-valued temporary array
             using tmp_type = xt::real_promote_type_t<out_type>;
@@ -295,7 +289,7 @@ namespace xvigra
 
             detail::distance_transform_impl(tmp, tmp, pixel_pitch);
 
-            out = round(tmp);
+            out = where(tmp > highest, highest, where(tmp < lowest, lowest, round(tmp)));
         }
         else
         {
@@ -368,6 +362,7 @@ namespace xvigra
 
 namespace xvigra
 {
+    // FIXME: port boundary distance transforms
 
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BoundaryDistanceTransform %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

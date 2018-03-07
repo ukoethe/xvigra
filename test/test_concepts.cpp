@@ -28,7 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <gtest/gtest.h>
+#include "unittest.hpp"
 #include <xvigra/concepts.hpp>
 #include <xtensor/xarray.hpp>
 #include <xtensor/xtensor.hpp>
