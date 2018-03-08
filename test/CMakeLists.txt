@@ -13,6 +13,7 @@ set(XVIGRA_TESTS
     test_math.cpp
     test_morphology.cpp
     test_slicer.cpp
+    test_tiny_vector.cpp
 )
 
 add_executable(test_xvigra ${XVIGRA_TESTS})

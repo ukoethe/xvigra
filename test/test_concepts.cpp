@@ -30,6 +30,7 @@
 
 #include "unittest.hpp"
 #include <xvigra/concepts.hpp>
+#include <xvigra/tiny_vector.hpp>
 #include <xtensor/xarray.hpp>
 #include <xtensor/xtensor.hpp>
 #include <vector>
@@ -56,6 +57,9 @@ namespace xvigra
 
     TEST(concepts, concepts)
     {
+        EXPECT_TRUE((tiny_vector_concept<tiny_vector<double,2>>::value));
+        EXPECT_FALSE(tiny_vector_concept<std::vector<double>>::value);
+
         EXPECT_TRUE(tensor_concept<xt::xarray<double>>::value);
         EXPECT_TRUE((tensor_concept<xt::xtensor<double,2>>::value));
         EXPECT_FALSE(tensor_concept<std::vector<double>>::value);
