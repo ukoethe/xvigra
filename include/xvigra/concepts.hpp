@@ -61,6 +61,46 @@ namespace xvigra
     : public std::integral_constant<bool,
                                     std::is_base_of<tags::tiny_vector_tag, std::decay_t<T>>::value>
     {};
+    
+    /*********************/
+    /* iterator concepts */
+    /*********************/
+
+    namespace detail
+    {
+        template <class T>
+        struct iterator_category
+        {
+            static void test(...);
+
+            template <class U>
+            static typename U::iterator_category test(U *);
+
+            using type = decltype(test((std::iterator_traits<T> *)0));
+        };
+
+        template <class T, class Category>
+        struct iterator_concept_impl
+        : public std::integral_constant<bool,
+                                        std::is_convertible<typename iterator_category<T>::type,
+                                                            Category>::value>
+        {};
+    }
+
+    template <class T>
+    using input_iterator_concept = detail::iterator_concept_impl<T, std::input_iterator_tag>;
+
+    template <class T>
+    using output_iterator_concept = detail::iterator_concept_impl<T, std::output_iterator_tag>;
+
+    template <class T>
+    using forward_iterator_concept = detail::iterator_concept_impl<T, std::forward_iterator_tag>;
+
+    template <class T>
+    using bidirectional_iterator_concept = detail::iterator_concept_impl<T, std::bidirectional_iterator_tag>;
+
+    template <class T>
+    using random_access_iterator_concept = detail::iterator_concept_impl<T, std::random_access_iterator_tag>;
 
 } // namespace xvigra
 

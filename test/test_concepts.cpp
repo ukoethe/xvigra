@@ -54,11 +54,30 @@ namespace xvigra
         EXPECT_EQ(sizeof(test(1.0)), 4);
     }
 
-    TEST(concepts, tensor_concept)
+    TEST(concepts, concepts)
     {
         EXPECT_TRUE(tensor_concept<xt::xarray<double>>::value);
         EXPECT_TRUE((tensor_concept<xt::xtensor<double,2>>::value));
         EXPECT_FALSE(tensor_concept<std::vector<double>>::value);
+
+        EXPECT_TRUE(input_iterator_concept<int *>::value);
+        EXPECT_FALSE(output_iterator_concept<int *>::value);
+        EXPECT_TRUE(forward_iterator_concept<int *>::value);
+        EXPECT_TRUE(bidirectional_iterator_concept<int *>::value);
+        EXPECT_TRUE(random_access_iterator_concept<int *>::value);
+
+        EXPECT_FALSE(input_iterator_concept<int>::value);
+        EXPECT_FALSE(output_iterator_concept<int>::value);
+        EXPECT_FALSE(forward_iterator_concept<int>::value);
+        EXPECT_FALSE(bidirectional_iterator_concept<int>::value);
+        EXPECT_FALSE(random_access_iterator_concept<int>::value);
+
+        using iter = xt::xarray<double>::iterator;
+        EXPECT_TRUE(input_iterator_concept<iter>::value);
+        EXPECT_FALSE(output_iterator_concept<iter>::value);
+        EXPECT_TRUE(forward_iterator_concept<iter>::value);
+        EXPECT_TRUE(bidirectional_iterator_concept<iter>::value);
+        EXPECT_TRUE(random_access_iterator_concept<iter>::value);
     }
 
 } // namespace xvigra
