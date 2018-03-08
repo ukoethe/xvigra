@@ -69,7 +69,7 @@ namespace xvigra
     namespace detail
     {
         template <class T>
-        struct iterator_category
+        struct iterator_category_impl
         {
             static void test(...);
 
@@ -82,7 +82,7 @@ namespace xvigra
         template <class T, class Category>
         struct iterator_concept_impl
         : public std::integral_constant<bool,
-                                        std::is_convertible<typename iterator_category<T>::type,
+                                        std::is_convertible<typename iterator_category_impl<T>::type,
                                                             Category>::value>
         {};
     }
