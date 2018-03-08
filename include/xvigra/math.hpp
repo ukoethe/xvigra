@@ -66,14 +66,14 @@ namespace xvigra
     /* is_close */
 	/************/
 
-    template <class T>
+    template <class T1, class T2>
     inline bool 
-    is_close(T const & a, T const & b, 
-              double rtol = 2.0*std::numeric_limits<double>::epsilon(),
-              double atol = 2.0*std::numeric_limits<double>::epsilon(),
-              bool equal_nan = false)
+    is_close(T1 const & a, T2 const & b, 
+             double rtol = 2.0*std::numeric_limits<double>::epsilon(),
+             double atol = 2.0*std::numeric_limits<double>::epsilon(),
+             bool equal_nan = false)
     {
-        using internal_type = promote_type_t<T, double>;
+        using internal_type = promote_type_t<T1, T2, double>;
         if(math::isnan(a) && math::isnan(b))
         {
             return equal_nan;
@@ -84,7 +84,7 @@ namespace xvigra
             return a == b;
         }
         auto d = math::abs(internal_type(a) - internal_type(b));
-        return d <= atol || d <= rtol * double(std::max(math::abs(a), math::abs(b)));
+        return d <= atol || d <= rtol * double(std::max<internal_type>(math::abs(a), math::abs(b)));
     }
 
     /*********/
