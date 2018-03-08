@@ -40,6 +40,24 @@ namespace xvigra
         EXPECT_EQ(sq(-1.5), 2.25);
     }
 
+    TEST(math, is_close)
+    {
+        double eps = 1e-5;
+
+        // test default tolerance
+        EXPECT_TRUE(is_close(numeric_constants<>::PI, 3.141592653589793238463));
+        EXPECT_FALSE(is_close(numeric_constants<>::PI, 3.141));
+        // test custom tolerance
+        EXPECT_TRUE(is_close(numeric_constants<>::PI, 3.141, 1e-3));
+        EXPECT_FALSE(is_close(numeric_constants<>::PI, 3.141, 1e-4));
+        EXPECT_TRUE(is_close(numeric_constants<>::PI, 3.141, 1e-4, 1e-3));
+        // test NaN
+        EXPECT_FALSE(is_close(std::log(-1.0), 3.141));
+        EXPECT_FALSE(is_close(std::log(-1.0), std::log(-2.0)));
+        EXPECT_TRUE(is_close(std::log(-1.0), std::log(-2.0), eps, eps, true));
+    }
+
+
     TEST(math, norm)
     {
         std::vector<int> v {3, 4, -5};

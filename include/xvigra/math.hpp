@@ -32,11 +32,26 @@
 #define XVIGRA_MATH_HPP
 
 #include <cmath>
+#include <limits>
+#include <complex>
 #include <xtensor/xnorm.hpp> // FIXME: includes lots of things
+#include <xtensor/xmath.hpp> // FIXME: includes lots of things
 #include "global.hpp"
 
 namespace xvigra
 {
+    /**********************************/
+    /* namespace for <cmath> contents */
+	/**********************************/
+
+    namespace math = xt::math;
+	
+    /*********************/
+    /* numeric_constants */
+	/*********************/
+
+	using xt::numeric_constants;
+
     /******/
     /* sq */
 	/******/
@@ -45,6 +60,31 @@ namespace xvigra
     inline T sq(T t)
     {
         return t*t;
+    }
+
+    /************/
+    /* is_close */
+	/************/
+
+    template <class T>
+    inline bool 
+    is_close(T const & a, T const & b, 
+              double rtol = 2.0*std::numeric_limits<double>::epsilon(),
+              double atol = 2.0*std::numeric_limits<double>::epsilon(),
+              bool equal_nan = false)
+    {
+        using internal_type = promote_type_t<T, double>;
+        if(math::isnan(a) && math::isnan(b))
+        {
+            return equal_nan;
+        }
+        if(math::isinf(a) && math::isinf(b))
+        {
+            // check for both infinity signs equal
+            return a == b;
+        }
+        auto d = math::abs(internal_type(a) - internal_type(b));
+        return d <= atol || d <= rtol * double(std::max(math::abs(a), math::abs(b)));
     }
 
     /*********/
