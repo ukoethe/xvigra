@@ -54,11 +54,11 @@ namespace xvigra
         EXPECT_EQ(sizeof(test(1.0)), 4);
     }
 
-    TEST(concepts, tensor_like)
+    TEST(concepts, tensor_concept)
     {
-        EXPECT_TRUE(tensor_like<xt::xarray<double>>::value);
-        EXPECT_TRUE((tensor_like<xt::xtensor<double,2>>::value));
-        EXPECT_FALSE(tensor_like<std::vector<double>>::value);
+        EXPECT_TRUE(tensor_concept<xt::xarray<double>>::value);
+        EXPECT_TRUE((tensor_concept<xt::xtensor<double,2>>::value));
+        EXPECT_FALSE(tensor_concept<std::vector<double>>::value);
     }
 
 } // namespace xvigra

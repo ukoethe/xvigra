@@ -45,6 +45,24 @@ namespace xvigra
 
 	using index_t = std::ptrdiff_t;
 
+    constexpr static index_t runtime_size  = -1;
+
+    /********/
+    /* tags */
+    /********/
+
+    namespace tags
+    {
+        struct tiny_vector_tag {};
+
+        struct skip_initialization_tag {};
+    }
+
+    namespace
+    {
+        tags::skip_initialization_tag  dont_init;
+    }
+
     /********************/
     /* rebind_container */
     /********************/

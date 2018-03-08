@@ -191,7 +191,7 @@ namespace xvigra
 	// doxygen_overloaded_function(template <...> void multiBinaryErosion)
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	binary_erosion(InArray const & in, OutArray && out, double radius)
 	{
@@ -289,7 +289,7 @@ namespace xvigra
 	// doxygen_overloaded_function(template <...> void multiBinaryDilation)
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	binary_dilation(InArray const & in, OutArray && out, double radius)
 	{
@@ -313,7 +313,7 @@ namespace xvigra
     /******************/
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	binary_opening(InArray const & in, OutArray && out, double radius)
 	{
@@ -339,7 +339,7 @@ namespace xvigra
     /******************/
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	binary_closing(InArray const & in, OutArray && out, double radius)
 	{
@@ -436,7 +436,7 @@ namespace xvigra
 	// doxygen_overloaded_function(template <...> void multiGrayscaleErosion)
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	grayscale_erosion(InArray const & in, OutArray && out, double sigma)
 	{
@@ -520,7 +520,7 @@ namespace xvigra
 	// doxygen_overloaded_function(template <...> void multiGrayscaleDilation)
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	grayscale_dilation(InArray const & in, OutArray && out, double sigma)
 	{
@@ -533,7 +533,7 @@ namespace xvigra
     /*********************/
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	grayscale_opening(InArray const & in, OutArray && out, double sigma)
 	{
@@ -547,7 +547,7 @@ namespace xvigra
     /*********************/
 
 	template <class InArray, class OutArray,
-	          VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+	          VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
 	void
 	grayscale_closing(InArray const & in, OutArray && out, double sigma)
 	{

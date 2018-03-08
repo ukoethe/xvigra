@@ -33,16 +33,35 @@
 
 #include "global.hpp"
 #include <xtensor/xconcepts.hpp>
+#include <type_traits>
 
 namespace xvigra
 {
+    /*****************/
+    /* VIGRA_REQUIRE */
+    /*****************/
+
     #define VIGRA_REQUIRE class = std::enable_if_t
 
+    /******************/
+    /* tensor_concept */
+    /******************/
+
     template <class T>
-    struct tensor_like
+    struct tensor_concept
     : public xt::is_xexpression<T>
     {};
     
+    /***********************/
+    /* tiny_vector_concept */
+    /***********************/
+
+   template <class T>
+    struct tiny_vector_concept
+    : public std::integral_constant<bool,
+                                    std::is_base_of<tags::tiny_vector_tag, std::decay_t<T>>::value>
+    {};
+
 } // namespace xvigra
 
 #endif // XVIGRA_CONCEPTS_HPP

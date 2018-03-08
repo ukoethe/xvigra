@@ -253,7 +253,7 @@ namespace xvigra
     // doxygen_overloaded_function(template <...> void separableMultiDistSquared)
 
     template <class InArray, class OutArray, class PitchArray,
-              VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void distance_transform_squared(InArray const & in, OutArray && out, 
                                     bool background, PitchArray const & pixel_pitch)
     {
@@ -308,7 +308,7 @@ namespace xvigra
     }
 
     template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void distance_transform_squared(InArray const & in, OutArray && out, 
                                     bool background = false)
     {
@@ -325,7 +325,7 @@ namespace xvigra
         Calls distance_transform_squared() and takes the square root of the result.
     */
     template <class InArray, class OutArray, class PitchArray,
-              VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void distance_transform(InArray const & in, OutArray && out, 
                             bool background, PitchArray const & pixel_pitch)
     {
@@ -334,7 +334,7 @@ namespace xvigra
     }
 
     template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_like<InArray>::value && tensor_like<OutArray>::value>>
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void distance_transform(InArray const & in, OutArray && out, 
                             bool background = false)
     {
