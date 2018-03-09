@@ -57,6 +57,13 @@ namespace xvigra
 
     TEST(concepts, concepts)
     {
+        EXPECT_TRUE((container_concept<tiny_vector<double,2>>::value));
+        EXPECT_TRUE((container_concept<xt::xarray<double>>::value));
+        EXPECT_TRUE((container_concept<xt::xtensor<double,2>>::value));
+        EXPECT_TRUE((container_concept<std::vector<double>>::value));
+        EXPECT_FALSE((container_concept<double>::value));
+        EXPECT_FALSE((container_concept<double*>::value));
+
         EXPECT_TRUE((tiny_vector_concept<tiny_vector<double,2>>::value));
         EXPECT_FALSE(tiny_vector_concept<std::vector<double>>::value);
 

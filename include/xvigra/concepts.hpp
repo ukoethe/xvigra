@@ -43,6 +43,30 @@ namespace xvigra
 
     #define VIGRA_REQUIRE class = std::enable_if_t
 
+    /*********************/
+    /* container_concept */
+    /*********************/
+
+    namespace detail
+    {
+        template <class T>
+        struct container_concept_impl
+        {
+            static void test(...);
+
+            template <class U>
+            static int test(U *, typename U::value_type * = 0);
+
+            static constexpr bool value = std::is_same<int, decltype(test((std::decay_t<T> *)0))>::value;
+        };
+    }
+
+    template <class T>
+    struct container_concept
+    : public std::integral_constant<bool,
+                                    detail::container_concept_impl<T>::value>
+    {};
+    
     /******************/
     /* tensor_concept */
     /******************/
