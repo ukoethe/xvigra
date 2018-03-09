@@ -112,6 +112,12 @@ namespace xvigra
         using type = xt::xtensor<NT, N, L>;
     };
 
+    template <class T, index_t N, class NT>
+    struct rebind_container<tiny_vector<T, N>, NT>
+    {
+        using type = tiny_vector<NT, N>;
+    };
+
     /********************/
     /* conditional cast */
     /********************/

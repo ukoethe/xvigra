@@ -274,9 +274,9 @@ namespace xvigra
 
         void swap(tiny_vector_impl & other);
 
-      protected:
         constexpr static bool may_use_uninitialized_memory = xt::xtrivially_default_constructible<value_type>::value;
 
+      protected:
         /* allocate() assumes that m_size is already set,
            but no memory has been allocated yet */
         void allocate(value_type const & v = value_type());
