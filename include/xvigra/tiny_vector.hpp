@@ -165,16 +165,16 @@ namespace xvigra
             /// factory functions for the k-th unit vector
         template <index_t SIZE=static_size>
         static auto unit_vector(index_t k);
-        
+
         static auto unit_vector(index_t size, index_t k);
 
             /// factory function for fixed-size linear sequence ending at <tt>end-1</tt>
-	    static auto range(value_type end);
+        static auto range(value_type end);
 
             /// factory function for a linear sequence from <tt>begin</tt> to <tt>end</tt>
             /// (exclusive) with stepsize <tt>step</tt>
-	    template <class T1, class T2=value_type>
-	    static auto range(value_type begin, T1 end, T2 step = value_type(1));
+        template <class T1, class T2=value_type>
+        static auto range(value_type begin, T1 end, T2 step = value_type(1));
     };
 
     /************************************/
@@ -2766,18 +2766,66 @@ namespace xvigra
                             r1[0]*r2[1] - r1[1]*r2[0]};
     }
 
-    /// squared norm
+    // /// squared norm
+    // template <class V, index_t N, class R>
+    // inline auto
+    // norm_sq(tiny_vector<V, N, R> const & t)
+    // {
+    //     using result_type = squared_norm_type_t<tiny_vector<V, N, R>>;
+    //     result_type result = result_type();
+    //     for(index_t i=0; i<t.size(); ++i)
+    //         result += norm_sq(t[i]);
+    //     return result;
+    // }
+
+    // using xt::norm_lp;
+    // using xt::norm_lp_to_p;
+    // using xt::norm_l0;
+    // using xt::norm_l1;
+    // using xt::norm_l2;
+    // using xt::norm_linf;
+    // using xt::norm_sq;
+
+    #define XVIGRA_EMPTY
+    #define XVIGRA_COMMA ,
+    #define XVIGRA_NORM_FUNCTION(NAME, RESULT_TYPE, REDUCE_EXPR, REDUCE_OP)     \
+    template <class V, index_t N, class R>                                      \
+    inline auto NAME(tiny_vector<V, N, R> const & t) noexcept                   \
+    {                                                                           \
+        using argument_type = tiny_vector<V, N, R>;                             \
+        using value_type = typename argument_type::value_type;                  \
+        using result_type = RESULT_TYPE;                                        \
+        result_type result = result_type();                                     \
+        for(index_t i=0; i<t.size(); ++i)                                       \
+            result = REDUCE_EXPR(result REDUCE_OP NAME(t[i]));                  \
+        return result;                                                          \
+    }
+
+    XVIGRA_NORM_FUNCTION(norm_l0, unsigned long long, XVIGRA_EMPTY, +)
+    XVIGRA_NORM_FUNCTION(norm_l1, squared_norm_type_t<argument_type>, XVIGRA_EMPTY, +)
+    XVIGRA_NORM_FUNCTION(norm_sq, squared_norm_type_t<argument_type>, XVIGRA_EMPTY, +)
+    XVIGRA_NORM_FUNCTION(norm_linf, decltype(norm_linf(std::declval<value_type>())),
+                                    std::max<result_type>, XVIGRA_COMMA)
+
+    #undef XVIGRA_EMPTY
+    #undef XVIGRA_COMMA
+    #undef XVIGRA_NORM_FUNCTION
+
     template <class V, index_t N, class R>
-    inline auto
-    norm_sq(tiny_vector<V, N, R> const & t)
+    inline auto norm_lp_to_p(tiny_vector<V, N, R> const & t, double p) noexcept
     {
-        using result_type = squared_norm_type_t<tiny_vector<V, N, R>>;
+        using result_type = norm_type_t<typename tiny_vector<V, N, R>::value_type>;
         result_type result = result_type();
         for(index_t i=0; i<t.size(); ++i)
-            result += norm_sq(t[i]);
+            result = result + norm_lp_to_p(t[i], p);
         return result;
     }
 
+    template <class V, index_t N, class R>
+    inline auto norm_lp(tiny_vector<V, N, R> const & t, double p) noexcept
+    {
+        return std::pow(norm_lp_to_p(t, p), 1.0 / p);
+    }
 //@}
 
 } // namespace xvigra

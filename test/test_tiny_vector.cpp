@@ -279,11 +279,11 @@ namespace xvigra
 
         if(v1.size() == SIZE)
         {
-        	EXPECT_TRUE(all_less(v0, v1));
+            EXPECT_TRUE(all_less(v0, v1));
         }
         else
         {
-        	EXPECT_THROW(all_less(v0, v1), std::runtime_error);
+            EXPECT_THROW(all_less(v0, v1), std::runtime_error);
         }
         EXPECT_EQ(all_less(v2, v3), !std::is_integral<T>::value);
         EXPECT_TRUE(all_greater(v2, v0));
@@ -445,9 +445,9 @@ namespace xvigra
            fvn{-1.0f, -2.25f, -128.5f};
 
         EXPECT_EQ(+iv3, iv3);
-    	EXPECT_EQ(-iv3, ivn);
-    	EXPECT_EQ(-fv3, fvn);
-        
+        EXPECT_EQ(-iv3, ivn);
+        EXPECT_EQ(-fv3, fvn);
+
         EXPECT_EQ(bv0 + bv1, bv1);
         EXPECT_EQ(bv0 + 1.25, fv1 + 0.25);
         EXPECT_EQ(1.25 + bv0, 0.25 + fv1);
@@ -492,7 +492,7 @@ namespace xvigra
         EXPECT_EQ(fvp, fv3);
     }
 
-    TEST(xtiny, algebraic)
+    TEST(tiny_vector, algebraic)
     {
         using BV = tiny_vector<uint8_t, SIZE>;
         using IV = tiny_vector<int, SIZE>;
@@ -570,32 +570,81 @@ namespace xvigra
         // EXPECT_TRUE(equalIter(oddRef, oddRef + SIZE, (iv3 & 1).begin(), SIZE));
     }
 
-//     TEST(xtiny, norm)
-//     {
-//         using math::sqrt;
+    TEST(tiny_vector, norm)
+    {
+        using math::sqrt;
 
-//         EXPECT_TRUE(norm_sq(bv1) == SIZE);
-//         EXPECT_TRUE(norm_sq(iv1) == SIZE);
-//         EXPECT_TRUE(norm_sq(fv1) == (float)SIZE);
+        using BV = tiny_vector<uint8_t, SIZE>;
+        using IV = tiny_vector<int, SIZE>;
+        using FV = tiny_vector<float, SIZE>;
 
-//         EXPECT_EQ(norm_sq(bv3), dot(bv3, bv3));
-//         EXPECT_EQ(norm_sq(iv3), dot(iv3, iv3));
-//         EXPECT_NEAR(norm_sq(fv3), sum(fv3*fv3), 1e-6);
-//         EXPECT_NEAR(norm_sq(fv3), dot(fv3, fv3), 1e-6);
+        BV bv3{0, 2, 200},
+           bv0(SIZE),
+           bv1(SIZE, 1);
+        IV iv3{1, 2, 2},
+           iv0(SIZE),
+           iv1(SIZE, 1),
+           ivn{-1, -2, -2};
+        FV fv3{1.0f, 2.25f, 4.5f},
+           fv0(SIZE),
+           fv1(SIZE, 1.0f),
+           fvn{0.0f, -2.25f, -4.5f};
 
-//         tiny_array<IV, 3> ivv{ iv3, iv3, iv3 };
-//         EXPECT_EQ(norm_sq(ivv), 3 * norm_sq(iv3));
-//         EXPECT_EQ(norm_l2(ivv), sqrt(3.0*norm_sq(iv3)));
-//         // EXPECT_EQ(elementwise_norm(iv3), iv3);
-//         // EXPECT_EQ(elementwise_squared_norm(iv3), (IV{ 1, 4, 16 }));
+        EXPECT_EQ(norm_l0(bv0), 0);
+        EXPECT_EQ(norm_l0(iv0), 0);
+        EXPECT_EQ(norm_l0(fv0), 0);
+        EXPECT_EQ(norm_l0(bv3), 2);
+        EXPECT_EQ(norm_l0(iv3), 3);
+        EXPECT_EQ(norm_l0(fv3), 3);
+        EXPECT_EQ(norm_l0(ivn), 3);
+        EXPECT_EQ(norm_l0(fvn), 2);
 
-//         EXPECT_NEAR(norm_l2(bv3), sqrt(dot(bv3, bv3)), 1e-6);
-//         EXPECT_NEAR(norm_l2(iv3), sqrt(dot(iv3, iv3)), 1e-6);
-//         EXPECT_NEAR(norm_l2(fv3), sqrt(dot(fv3, fv3)), 1e-6);
+        EXPECT_EQ(norm_l1(bv0), 0);
+        EXPECT_EQ(norm_l1(iv0), 0);
+        EXPECT_EQ(norm_l1(fv0), 0.0);
+        EXPECT_EQ(norm_l1(bv3), 202);
+        EXPECT_EQ(norm_l1(iv3), 5);
+        EXPECT_EQ(norm_l1(fv3), 7.75);
+        EXPECT_EQ(norm_l1(ivn), 5);
+        EXPECT_EQ(norm_l1(fvn), 6.75);
 
-//         BV bv { 1, 2, 200};
-//         EXPECT_EQ(norm_sq(bv), 40005);
-//     }
+        EXPECT_EQ(norm_lp(iv3, 1), 5);
+        EXPECT_EQ(norm_lp(fv3, 1), 7.75);
+        EXPECT_EQ(norm_lp(ivn, 1), 5);
+        EXPECT_EQ(norm_lp(fvn, 1), 6.75);
+
+        EXPECT_EQ(norm_sq(bv0), 0);
+        EXPECT_EQ(norm_sq(iv0), 0);
+        EXPECT_EQ(norm_sq(fv0), 0.0);
+        EXPECT_EQ(norm_sq(bv1), SIZE);
+        EXPECT_EQ(norm_sq(iv1), SIZE);
+        EXPECT_EQ(norm_sq(fv1), (float)SIZE);
+        EXPECT_EQ(norm_sq(bv3), 40004);
+        EXPECT_EQ(norm_sq(iv3), 9);
+        EXPECT_EQ(norm_sq(fv3), 26.3125);
+        EXPECT_EQ(norm_sq(fv3), sum(fv3*fv3));
+        EXPECT_EQ(norm_sq(fv3), dot(fv3, fv3));
+        EXPECT_EQ(norm_sq(ivn), 9);
+        EXPECT_EQ(norm_sq(fvn), 25.3125);
+
+        EXPECT_EQ(norm_l2(iv3), 3.0);
+        EXPECT_NEAR(norm_l2(fv3), sqrt(26.3125), 1e-14);
+
+        EXPECT_EQ(norm_lp(iv3, 2), 3.0);
+
+        EXPECT_EQ(norm_linf(bv0), 0);
+        EXPECT_EQ(norm_linf(iv0), 0);
+        EXPECT_EQ(norm_linf(fv0), 0.0);
+        EXPECT_EQ(norm_linf(bv3), 200);
+        EXPECT_EQ(norm_linf(iv3), 2);
+        EXPECT_EQ(norm_linf(fv3), 4.5);
+        EXPECT_EQ(norm_linf(ivn), 2);
+        EXPECT_EQ(norm_linf(fvn), 4.5);
+
+        tiny_vector<IV, 3> ivv{ iv3, iv3, iv3 };
+        EXPECT_EQ(norm_sq(ivv), 3 * norm_sq(iv3));
+        EXPECT_NEAR(norm_l2(ivv), sqrt(3.0*norm_sq(iv3)), 1e-14);
+    }
 } // namespace xvigra
 
 // /***************************************************************************
