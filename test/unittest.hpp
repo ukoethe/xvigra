@@ -33,16 +33,41 @@
 
 #include <xtensor/xio.hpp>
 
+// #define XVIGRA_USE_DOCTEST
+
 #ifndef XVIGRA_USE_DOCTEST
+
     #include <gtest/gtest.h>
+
+    #define TEMPLATED_TEST_SETUP(ID, TYPES)        \
+    template <class T>                             \
+    class ID : public testing::Test                \
+    {};                                            \
+    TYPED_TEST_CASE(ID, TYPES)
+
+    #define TEMPLATED_TEST(ID, NAME)               \
+    TYPED_TEST(ID, NAME)
+
 #else
+
     #include <doctest.h>
-    #define TEST(A, B) TEST_CASE(#A "." #B)
-    #define EXPECT_EQ(A, B) CHECK_EQ(A, B)
-    #define EXPECT_NE(A, B) CHECK_NE(A, B)
-    #define EXPECT_TRUE(A)  CHECK(A)
-    #define EXPECT_FALSE(A) CHECK_FALSE(A)
-    #define EXPECT_THROW(A, B) CHECK_THROWS_AS(A, B)
+
+    namespace testing = doctest;
+
+    #define TEST(A, B)            TEST_CASE(#A "." #B)
+    #define EXPECT_EQ(A, B)       CHECK_EQ(A, B)
+    #define EXPECT_NE(A, B)       CHECK_NE(A, B)
+    #define EXPECT_TRUE(A)        CHECK(A)
+    #define EXPECT_FALSE(A)       CHECK_FALSE(A)
+    #define EXPECT_THROW(A, B)    CHECK_THROWS_AS(A, B)
+    #define EXPECT_NEAR(A, B, C)  CHECK(A == doctest::Approx(B).epsilon(C))
+
+    #define TEMPLATED_TEST_SETUP(ID, TYPES)        \
+    using ID = TYPES
+
+    #define TEMPLATED_TEST(ID, NAME)                   \
+    TEST_CASE_TEMPLATE(#ID "." #NAME, TypeParam, ID)
+
 #endif
 
 #endif // XVIGRA_UNITTEST_HPP

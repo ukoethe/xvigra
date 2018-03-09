@@ -2221,7 +2221,7 @@ namespace xvigra
     #define XVIGRA_TINYARRAY_OPERATORS(OP)                                                   \
     template <class V1, index_t N1, class R1, class V2,                                      \
               VIGRA_REQUIRE<!tiny_vector_concept<V2>::value &&                               \
-                              std::is_convertible<V2, V1>::value> >                          \
+                            std::is_convertible<V2, V1>::value> >                            \
     inline tiny_vector<V1, N1, R1> &                                                         \
     operator OP##=(tiny_vector<V1, N1, R1> & l,                                              \
                    V2 r)                                                                     \
@@ -2261,7 +2261,8 @@ namespace xvigra
     }                                                                                        \
                                                                                              \
     template <class V1, index_t N1, class R1, class V2,                                      \
-              VIGRA_REQUIRE<!tiny_vector_concept<V2>::value> >                               \
+              VIGRA_REQUIRE<!tiny_vector_concept<V2>::value &&                               \
+                            std::is_convertible<V2, V1>::value>>                             \
     inline                                                                                   \
     tiny_vector<decltype((*(V1*)0) OP (*(V2*)0)), N1>                                        \
     operator OP(tiny_vector<V1, N1, R1> const & l,                                           \
@@ -2275,7 +2276,7 @@ namespace xvigra
                                                                                              \
     template <class V1, class V2, index_t N2, class R2,                                      \
               VIGRA_REQUIRE<!tiny_vector_concept<V1>::value &&                               \
-                              !std::is_base_of<std::ios_base, V1>::value> >                  \
+                            std::is_convertible<V1, V2>::value>>                             \
     inline                                                                                   \
     tiny_vector<decltype((*(V1*)0) OP (*(V2*)0)), N2>                                        \
     operator OP(V1 l,                                                                        \
