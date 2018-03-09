@@ -37,6 +37,7 @@
 #include <xtensor/xnorm.hpp> // FIXME: includes lots of things
 #include <xtensor/xmath.hpp> // FIXME: includes lots of things
 #include "global.hpp"
+#include "concepts.hpp"
 
 namespace xvigra
 {
@@ -66,14 +67,38 @@ namespace xvigra
     /* is_close */
 	/************/
 
-    template <class T1, class T2>
+	template <class T, 
+	          bool IS_ARITHMETIC=std::is_arithmetic<T>::value, 
+	          bool IS_INTEGRAL=std::is_integral<T>::value,
+	          bool IS_CONTAINER=container_concept<T>::value>
+	struct default_tolerance;
+
+	template <class T>
+	struct default_tolerance<T, true, false, false> // T is floating point
+	{
+		static constexpr double value = 2.0*std::numeric_limits<T>::epsilon();
+	};
+
+	template <class T>
+	struct default_tolerance<T, true, true, false> // T is integral
+	{
+		static constexpr double value = 0.0;
+	};
+
+	template <class T>
+	struct default_tolerance<T, false, false, true> // T is container
+	{
+		static constexpr double value = default_tolerance<typename T::value_type>::value;
+	};
+
+    template <class T>
     inline bool 
-    is_close(T1 const & a, T2 const & b, 
-             double rtol = 2.0*std::numeric_limits<double>::epsilon(),
-             double atol = 2.0*std::numeric_limits<double>::epsilon(),
+    is_close(T const & a, T const & b, 
+             double rtol = default_tolerance<T>::value,
+             double atol = default_tolerance<T>::value,
              bool equal_nan = false)
     {
-        using internal_type = promote_type_t<T1, T2, double>;
+        using internal_type = promote_type_t<T, double>;
         if(math::isnan(a) && math::isnan(b))
         {
             return equal_nan;
