@@ -48,15 +48,12 @@
 
 namespace xvigra
 {
-    /****************/
-    /* declarations */
-    /****************/
+    /***********************/
+    /* forward declaration */
+    /***********************/
 
     template <class VALUETYPE, index_t N, class REPRESENTATION>
     class tiny_vector_impl;
-
-    template <class VALUETYPE, index_t N=runtime_size, class REPRESENTATION=void>
-    class tiny_vector;
 
     /***************/
     /* tiny_vector */
@@ -866,18 +863,46 @@ namespace xvigra
 
     #undef XVIGRA_TINY_COMPARISON
 
-    template <class V1, index_t N1, class R1, class V2, index_t N2, class R2>
+    template <class V, index_t N1, class R1, index_t N2, class R2>
     inline bool
-    all_close(tiny_vector<V1, N1, R1> const & l,
-              tiny_vector<V2, N2, R2> const & r,
-              double rtol = 2.0*std::numeric_limits<double>::epsilon(),
-              double atol = 2.0*std::numeric_limits<double>::epsilon(),
+    all_close(tiny_vector<V, N1, R1> const & l,
+              tiny_vector<V, N2, R2> const & r,
+              double rtol = default_tolerance<V>::value,
+              double atol = default_tolerance<V>::value,
               bool equal_nan = false)
     {
         if(l.size() != r.size())
             return false;
          for(index_t k=0; k < l.size(); ++k)
             if(!is_close(l[k], r[k], rtol, atol, equal_nan))
+                return false;
+        return true;
+    }
+
+    template <class V, index_t N1, class R1, index_t N2, class R2>
+    inline bool
+    all_close(tiny_vector<V, N1, R1> const & l,
+              V const & r,
+              double rtol = 2.0*std::numeric_limits<double>::epsilon(),
+              double atol = 2.0*std::numeric_limits<double>::epsilon(),
+              bool equal_nan = false)
+    {
+         for(index_t k=0; k < l.size(); ++k)
+            if(!is_close(l[k], r, rtol, atol, equal_nan))
+                return false;
+        return true;
+    }
+
+    template <class V, index_t N1, class R1, index_t N2, class R2>
+    inline bool
+    all_close(V const & l,
+              tiny_vector<V, N2, R2> const & r,
+              double rtol = 2.0*std::numeric_limits<double>::epsilon(),
+              double atol = 2.0*std::numeric_limits<double>::epsilon(),
+              bool equal_nan = false)
+    {
+         for(index_t k=0; k < r.size(); ++k)
+            if(!is_close(l, r[k], rtol, atol, equal_nan))
                 return false;
         return true;
     }
@@ -2418,16 +2443,17 @@ namespace xvigra
 
     #undef XVIGRA_TINYARRAY_BINARY_FUNCTION
 
-        /** Apply pow() function to each vector component.
+        /** Apply pow() function to each vector element.
         */
     template <class V, index_t N, class R, class E>
     inline auto
     pow(tiny_vector<V, N, R> const & v, E exponent)
     {
         using math::pow;
-        tiny_vector<decltype(pow(v[0], exponent)), N> res(v.size(), dont_init);
+        auto e = static_cast<promote_type_t<V, E>>(exponent);
+        tiny_vector<decltype(pow(v[0], e)), N> res(v.size(), dont_init);
         for(index_t k=0; k < v.size(); ++k)
-            res[k] = pow(v[k], exponent);
+            res[k] = pow(v[k], e);
         return res;
     }
 

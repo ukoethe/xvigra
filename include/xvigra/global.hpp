@@ -47,6 +47,20 @@ namespace xvigra
 
     constexpr static index_t runtime_size  = -1;
 
+    /***********************/
+    /* tiny_vector forward */
+    /***********************/
+
+    template <class VALUETYPE, index_t N=runtime_size, class REPRESENTATION=void>
+    class tiny_vector;
+
+    /***********/
+    /* shape_t */
+    /***********/
+
+    template <index_t N=runtime_size>
+    using shape_t = tiny_vector<index_t, N>;
+
     /********/
     /* tags */
     /********/
