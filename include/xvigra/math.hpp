@@ -43,19 +43,19 @@ namespace xvigra
 {
     /**********************************/
     /* namespace for <cmath> contents */
-	/**********************************/
+    /**********************************/
 
     namespace math = xt::math;
-	
+
     /*********************/
     /* numeric_constants */
-	/*********************/
+    /*********************/
 
-	using xt::numeric_constants;
+    using xt::numeric_constants;
 
     /******/
     /* sq */
-	/******/
+    /******/
 
     template <class T>
     inline T sq(T t)
@@ -65,35 +65,35 @@ namespace xvigra
 
     /************/
     /* is_close */
-	/************/
+    /************/
 
-	template <class T, 
-	          bool IS_ARITHMETIC=std::is_arithmetic<T>::value, 
-	          bool IS_INTEGRAL=std::is_integral<T>::value,
-	          bool IS_CONTAINER=container_concept<T>::value>
-	struct default_tolerance;
-
-	template <class T>
-	struct default_tolerance<T, true, false, false> // T is floating point
-	{
-		static constexpr double value = 2.0*std::numeric_limits<T>::epsilon();
-	};
-
-	template <class T>
-	struct default_tolerance<T, true, true, false> // T is integral
-	{
-		static constexpr double value = 0.0;
-	};
-
-	template <class T>
-	struct default_tolerance<T, false, false, true> // T is container
-	{
-		static constexpr double value = default_tolerance<typename T::value_type>::value;
-	};
+    template <class T,
+              bool IS_ARITHMETIC=std::is_arithmetic<T>::value,
+              bool IS_INTEGRAL=std::is_integral<T>::value,
+              bool IS_CONTAINER=container_concept<T>::value>
+    struct default_tolerance;
 
     template <class T>
-    inline bool 
-    is_close(T const & a, T const & b, 
+    struct default_tolerance<T, true, false, false> // T is floating point
+    {
+        static constexpr double value = 2.0*std::numeric_limits<T>::epsilon();
+    };
+
+    template <class T>
+    struct default_tolerance<T, true, true, false> // T is integral
+    {
+        static constexpr double value = 0.0;
+    };
+
+    template <class T>
+    struct default_tolerance<T, false, false, true> // T is container
+    {
+        static constexpr double value = default_tolerance<typename T::value_type>::value;
+    };
+
+    template <class T>
+    inline bool
+    is_close(T const & a, T const & b,
              double rtol = default_tolerance<T>::value,
              double atol = default_tolerance<T>::value,
              bool equal_nan = false)
@@ -114,7 +114,7 @@ namespace xvigra
 
     /*********/
     /* norms */
-	/*********/
+    /*********/
 
     using xt::norm_lp;
     using xt::norm_lp_to_p;
@@ -127,49 +127,49 @@ namespace xvigra
     template <class T, class A>
     inline auto norm_sq(std::vector<T, A> const & v)
     {
-    	using result_type = squared_norm_type_t<std::vector<T, A>>;
-    	result_type res = result_type();
-    	for(auto u: v)
-    	{
-    		res += norm_sq(u);
-    	}
-    	return res;
+        using result_type = squared_norm_type_t<std::vector<T, A>>;
+        result_type res = result_type();
+        for(auto u: v)
+        {
+            res += norm_sq(u);
+        }
+        return res;
     }
 
     template <class T, class A>
     inline auto norm_linf(std::vector<T, A> const & v)
     {
-    	using result_type = decltype(norm_linf(v[0]));
-    	result_type res = result_type();
-    	for(auto u: v)
-    	{
-    		res = std::max(res, norm_linf(u));
-    	}
-    	return res;
+        using result_type = decltype(norm_linf(v[0]));
+        result_type res = result_type();
+        for(auto u: v)
+        {
+            res = std::max(res, norm_linf(u));
+        }
+        return res;
     }
 
     template <class T, std::size_t N>
     inline auto norm_sq(std::array<T, N> const & v)
     {
-    	using result_type = squared_norm_type_t<std::array<T, N>>;
-    	result_type res = result_type();
-    	for(auto u: v)
-    	{
-    		res += norm_sq(u);
-    	}
-    	return res;
+        using result_type = squared_norm_type_t<std::array<T, N>>;
+        result_type res = result_type();
+        for(auto u: v)
+        {
+            res += norm_sq(u);
+        }
+        return res;
     }
 
     template <class T, std::size_t N>
     inline auto norm_linf(std::array<T, N> const & v)
     {
-    	using result_type = decltype(norm_linf(v[0]));
-    	result_type res = result_type();
-    	for(auto u: v)
-    	{
-    		res = std::max(res, norm_linf(u));
-    	}
-   		return res;
+        using result_type = decltype(norm_linf(v[0]));
+        result_type res = result_type();
+        for(auto u: v)
+        {
+            res = std::max(res, norm_linf(u));
+        }
+           return res;
     }
 
 } // namespace xvigra

@@ -43,7 +43,7 @@ namespace xvigra
     /* index_t */
     /***********/
 
-	using index_t = std::ptrdiff_t;
+    using index_t = std::ptrdiff_t;
 
     constexpr static index_t runtime_size  = -1;
 

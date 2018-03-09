@@ -66,7 +66,7 @@ namespace xvigra
     : public std::integral_constant<bool,
                                     detail::container_concept_impl<T>::value>
     {};
-    
+
     /******************/
     /* tensor_concept */
     /******************/
@@ -75,17 +75,21 @@ namespace xvigra
     struct tensor_concept
     : public xt::is_xexpression<T>
     {};
-    
+
     /***********************/
     /* tiny_vector_concept */
     /***********************/
 
-   template <class T>
+    template <class T>
     struct tiny_vector_concept
-    : public std::integral_constant<bool,
-                                    std::is_base_of<tags::tiny_vector_tag, std::decay_t<T>>::value>
+    : public std::false_type
     {};
-    
+
+    template <class V, index_t N, class R>
+    struct tiny_vector_concept<tiny_vector<V, N, R>>
+    : public std::true_type
+    {};
+
     /*********************/
     /* iterator concepts */
     /*********************/
