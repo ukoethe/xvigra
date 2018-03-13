@@ -31,12 +31,6 @@
 #ifndef XVIGRA_TINY_VECTOR_HPP
 #define XVIGRA_TINY_VECTOR_HPP
 
-// #include <array>
-// #include <type_traits>
-// #include <iosfwd>
-// #include <memory>
-// #include <iterator>
-// #include <utility>
 #include <algorithm>
 #include <tuple>  // std::ignore
 #include <xtensor/xbuffer_adaptor.hpp>
