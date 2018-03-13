@@ -12,6 +12,7 @@ set(XVIGRA_TESTS
     test_global.cpp
     test_math.cpp
     test_morphology.cpp
+    test_padding.cpp
     test_slicer.cpp
     test_tiny_vector.cpp
 )
