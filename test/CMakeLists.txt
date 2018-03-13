@@ -9,6 +9,7 @@ set(XVIGRA_TESTS
     test_concepts.cpp
     test_distance_transform.cpp
     test_error.cpp
+    test_gaussian.cpp
     test_global.cpp
     test_math.cpp
     test_morphology.cpp
