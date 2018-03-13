@@ -15,6 +15,7 @@ set(XVIGRA_TESTS
     test_morphology.cpp
     test_padding.cpp
     test_slicer.cpp
+    test_splines.cpp
     test_tiny_vector.cpp
 )
 
