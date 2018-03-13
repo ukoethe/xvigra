@@ -35,7 +35,7 @@ namespace xvigra
 {
     TEST(gaussian, values)
     {
-        Gaussian<double> g,
+        gaussian<double> g,
                          g1(2.0, 1),
                          g2(1.0, 2),
                          g3(2.0, 3),

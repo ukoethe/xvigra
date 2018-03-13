@@ -53,7 +53,7 @@ namespace xvigra
             \ingroup MathFunctions
         */
     template <class T = double>
-    class Gaussian
+    class gaussian
     {
       public:
         using value_type = T;
@@ -72,7 +72,7 @@ namespace xvigra
                 sigma > 0.0
                 \endcode
             */
-        explicit Gaussian(T sigma = 1.0, unsigned int derivative_order = 0)
+        explicit gaussian(T sigma = 1.0, unsigned int derivative_order = 0)
         : sigma_(sigma),
           sigma2_(T(-0.5 / sigma / sigma)),
           norm_(0.0),
@@ -80,7 +80,7 @@ namespace xvigra
           hermite_polynomial_(derivative_order / 2 + 1)
         {
             vigra_precondition(sigma_ > 0.0,
-                "Gaussian::Gaussian(): sigma > 0 required.");
+                "gaussian::gaussian(): sigma > 0 required.");
             switch(order_)
             {
                 case 1:
@@ -100,24 +100,24 @@ namespace xvigra
             */
         result_type operator()(argument_type x) const;
 
-            /** Get the standard deviation of the Gaussian.
+            /** Get the standard deviation of the gaussian.
             */
         value_type sigma() const
         {
             return sigma_;
         }
 
-            /** Get the derivative order of the Gaussian.
+            /** Get the derivative order of the gaussian.
             */
         unsigned int derivative_order() const
         {
             return order_;
         }
 
-            /** Get the trauncated filter radius for a discrete approximation of the Gaussian.
-                The radius is given as a multiple of the Gaussian's standard deviation
+            /** Get the trauncated filter radius for a discrete approximation of the gaussian.
+                The radius is given as a multiple of the gaussian's standard deviation
                 (default: <tt>sigma * (3 + 1/2 * derivative_order()</tt> -- the second term
-                accounts for the fact that the derivatives of the Gaussian become wider
+                accounts for the fact that the derivatives of the gaussian become wider
                 with increasing order). The result is rounded to the next higher integer.
             */
         double radius(double sigma_multiple = 3.0) const
@@ -135,8 +135,8 @@ namespace xvigra
     };
 
     template <class T>
-    typename Gaussian<T>::result_type
-    Gaussian<T>::operator()(argument_type x) const
+    typename gaussian<T>::result_type
+    gaussian<T>::operator()(argument_type x) const
     {
         static constexpr bool need_cast = std::is_arithmetic<result_type>::value;
 
@@ -160,7 +160,7 @@ namespace xvigra
     }
 
     template <class T>
-    T Gaussian<T>::horner(T x) const
+    T gaussian<T>::horner(T x) const
     {
         int i = order_ / 2;
         T res = hermite_polynomial_[i];
@@ -170,7 +170,7 @@ namespace xvigra
     }
 
     template <class T>
-    void Gaussian<T>::calculate_hermite_polynomial()
+    void gaussian<T>::calculate_hermite_polynomial()
     {
         if(order_ == 0)
         {
