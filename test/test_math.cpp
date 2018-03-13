@@ -31,13 +31,20 @@
 #include "unittest.hpp"
 #include <xvigra/math.hpp>
 
-namespace xvigra 
+namespace xvigra
 {
     TEST(math, functions)
     {
         EXPECT_EQ(sq(2), 4);
         EXPECT_EQ(sq(1.5), 2.25);
         EXPECT_EQ(sq(-1.5), 2.25);
+
+        EXPECT_EQ(max(1.25, 1), 1.25);
+        EXPECT_EQ(max(1.25, 2), 2.0);
+        EXPECT_EQ(max(1.25, 2.5), 2.5);
+        EXPECT_EQ(min(1.25, 1), 1.);
+        EXPECT_EQ(min(1.25, 2), 1.25);
+        EXPECT_EQ(min(1.25, 2.5), 1.25);
     }
 
     TEST(math, is_close)

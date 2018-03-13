@@ -172,6 +172,68 @@ namespace xvigra
            return res;
     }
 
+    /*******/
+    /* min */
+    /*******/
+
+        /** \brief A proper minimum function.
+
+            The <tt>std::min</tt> template matches everything -- this is way too
+            greedy to be useful. xvigra implements the basic <tt>min</tt> function
+            only for arithmetic types and provides explicit overloads for everything
+            else. Moreover, xvigra's <tt>min</tt> function also computes the minimum
+            between two different types, as long as they have a <tt>std::common_type</tt>.
+
+            <b>\#include</b> \<xvigra/math.hpp\><br>
+            Namespace: xvigra
+        */
+    template <class T1, class T2,
+              VIGRA_REQUIRE<std::is_arithmetic<T1>::value && std::is_arithmetic<T2>::value> >
+    inline std::common_type_t<T1, T2>
+    min(T1 const & t1, T2 const & t2)
+    {
+        return std::min<std::common_type_t<T1, T2>>(t1, t2);
+    }
+
+    template <class T,
+              VIGRA_REQUIRE<std::is_arithmetic<T>::value> >
+    inline T const &
+    min(T const & t1, T const & t2)
+    {
+        return std::min(t1, t2);
+    }
+
+    /*******/
+    /* max */
+    /*******/
+
+        /** \brief A proper maximum function.
+
+            The <tt>std::max</tt> template matches everything -- this is way too
+            greedy to be useful. xvigra implements the basic <tt>max</tt> function
+            only for arithmetic types and provides explicit overloads for everything
+            else. Moreover, xvigra's <tt>max</tt> function also computes the maximum
+            between two different types, as long as they have a <tt>std::common_type</tt>.
+
+            <b>\#include</b> \<xvigra/math.hpp\><br>
+            Namespace: vigra
+        */
+    template <class T1, class T2,
+              VIGRA_REQUIRE<std::is_arithmetic<T1>::value && std::is_arithmetic<T2>::value> >
+    inline std::common_type_t<T1, T2>
+    max(T1 const & t1, T2 const & t2)
+    {
+        return std::max<std::common_type_t<T1, T2>>(t1, t2);
+    }
+
+    template <class T,
+              VIGRA_REQUIRE<std::is_arithmetic<T>::value> >
+    inline T const &
+    max(T const & t1, T const & t2)
+    {
+        return std::max(t1, t2);
+    }
+
 } // namespace xvigra
 
 #endif // XVIGRA_MATH_HPP
