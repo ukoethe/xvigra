@@ -65,9 +65,9 @@ namespace xvigra
                                              tiny_vector<int, runtime_size, int[1]>  // buffer_size < SIZE
                                             >;
 
-    TEMPLATED_TEST_SETUP(tiny_vector_test, tiny_vector_types);
+    TYPED_TEST_SETUP(tiny_vector_test, tiny_vector_types);
 
-    TEMPLATED_TEST(tiny_vector_test, construction)
+    TYPED_TEST(tiny_vector_test, construction)
     {
         using V = TypeParam;
         using T = typename V::value_type;
@@ -189,7 +189,7 @@ namespace xvigra
         EXPECT_EQ(transposed(r), v3);
     }
 
-    TEMPLATED_TEST(tiny_vector_test, subarray)
+    TYPED_TEST(tiny_vector_test, subarray)
     {
         using V = TypeParam;
         using A = typename V::template rebind_size<runtime_size>;
@@ -223,7 +223,7 @@ namespace xvigra
         EXPECT_EQ((r.template subarray<1, 3>()), (A{ 3,4 }));
     }
 
-    TEMPLATED_TEST(tiny_vector_test, erase_insert)
+    TYPED_TEST(tiny_vector_test, erase_insert)
     {
         using V = TypeParam;
         using V1 = typename V::template rebind_size<SIZE - 1>;
@@ -244,7 +244,7 @@ namespace xvigra
         EXPECT_EQ(v3, v11.push_front(v3[0]));
     }
 
-    TEMPLATED_TEST(tiny_vector_test, comparison)
+    TYPED_TEST(tiny_vector_test, comparison)
     {
         using V = TypeParam;
         using T = typename V::value_type;
@@ -304,7 +304,7 @@ namespace xvigra
         EXPECT_TRUE((any(v3) && !all(v3)));
     }
 
-    TEMPLATED_TEST(tiny_vector_test, ostream)
+    TYPED_TEST(tiny_vector_test, ostream)
     {
         using V = TypeParam;
         using T = typename V::value_type;

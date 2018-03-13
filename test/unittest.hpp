@@ -39,14 +39,11 @@
 
     #include <gtest/gtest.h>
 
-    #define TEMPLATED_TEST_SETUP(ID, TYPES)        \
+    #define TYPED_TEST_SETUP(ID, TYPES)        \
     template <class T>                             \
     class ID : public testing::Test                \
     {};                                            \
     TYPED_TEST_CASE(ID, TYPES)
-
-    #define TEMPLATED_TEST(ID, NAME)               \
-    TYPED_TEST(ID, NAME)
 
 #else
 
@@ -62,10 +59,10 @@
     #define EXPECT_THROW(A, B)    CHECK_THROWS_AS(A, B)
     #define EXPECT_NEAR(A, B, C)  CHECK(A == doctest::Approx(B).epsilon(C))
 
-    #define TEMPLATED_TEST_SETUP(ID, TYPES)        \
+    #define TYPED_TEST_SETUP(ID, TYPES)             \
     using ID = TYPES
 
-    #define TEMPLATED_TEST(ID, NAME)                   \
+    #define TYPED_TEST(ID, NAME)                    \
     TEST_CASE_TEMPLATE(#ID "." #NAME, TypeParam, ID)
 
 #endif
