@@ -49,11 +49,11 @@ namespace xvigra
         using shape_type = xt::dynamic_shape<std::size_t>;
 
         template <class SHAPE>
-        slicer(SHAPE const & shape, index_t keep_axis)
+        slicer(SHAPE const & shape, index_t free_axis)
         : shape_(shape.begin(), shape.end())
         , final_index_(shape_.size())
         {
-            this->keep_axis(keep_axis);
+            this->free_axis(free_axis);
         }
 
         template <class SHAPE>
@@ -62,14 +62,14 @@ namespace xvigra
         , final_index_(shape_.size())
         {}
 
-        void keep_axis(index_t axis)
+        void free_axis(index_t axis)
         {
-            keep_axes(std::array<index_t, 1>{axis});
+            free_axes(std::array<index_t, 1>{axis});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
-        void keep_axes(C axes)
+        void free_axes(C axes)
         {
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
@@ -91,14 +91,14 @@ namespace xvigra
             }
         }
 
-        void bind_axis(index_t axis)
+        void iterate_axis(index_t axis)
         {
-            bind_axes(std::array<index_t, 1>{axis});
+            iterate_axes(std::array<index_t, 1>{axis});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
-        void bind_axes(C axes)
+        void iterate_axes(C axes)
         {
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
