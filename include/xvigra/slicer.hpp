@@ -31,8 +31,10 @@
 #ifndef XVIGRA_SLICER_HPP
 #define XVIGRA_SLICER_HPP
 
+#include <algorithm>
 #include <xtensor/xstrided_view.hpp>
 #include "global.hpp"
+#include "concepts.hpp"
 
 namespace xvigra
 {
@@ -45,21 +47,75 @@ namespace xvigra
         // FIXME: support C- and F-order, higher dimensional slices
       public:
         using shape_type = xt::dynamic_shape<std::size_t>;
-        
-        slicer(shape_type const & shape, index_t skip_axis)
-        : shape_(shape)
-        , slice_(shape)
+
+        template <class SHAPE>
+        slicer(SHAPE const & shape, index_t keep_axis)
+        : shape_(shape.begin(), shape.end())
+        , final_index_(shape_.size())
         {
-            shape_[skip_axis] = 1;
-            for(index_t k=0; k < shape.size(); ++k)
+            this->keep_axis(keep_axis);
+        }
+
+        template <class SHAPE>
+        slicer(SHAPE const & shape)
+        : shape_(shape.begin(), shape.end())
+        , final_index_(shape_.size())
+        {}
+
+        void keep_axis(index_t axis)
+        {
+            keep_axes(std::array<index_t, 1>{axis});
+        }
+
+        template <class C,
+                  VIGRA_REQUIRE<container_concept<C>::value>>
+        void keep_axes(C axes)
+        {
+            std::sort(axes.begin(), axes.end());
+            for(index_t k=0, n=0; k < shape_.size(); ++k)
             {
-                if(k == skip_axis)
+                if(n < axes.size() && k == axes[n])
                 {
+                    shape_[k] = 1;
+                    slice_.push_back(xt::all());
+                    ++n;
+                }
+                else
+                {
+                    if(final_index_ == shape_.size())
+                    {
+                        final_index_ = k;
+                    }
+                    slice_.push_back(0);
+                }
+            }
+        }
+
+        void bind_axis(index_t axis)
+        {
+            bind_axes(std::array<index_t, 1>{axis});
+        }
+
+        template <class C,
+                  VIGRA_REQUIRE<container_concept<C>::value>>
+        void bind_axes(C axes)
+        {
+            std::sort(axes.begin(), axes.end());
+            for(index_t k=0, n=0; k < shape_.size(); ++k)
+            {
+                if(n < axes.size() && k != axes[n])
+                {
+                    shape_[k] = 1;
                     slice_.push_back(xt::all());
                 }
                 else
                 {
+                    if(final_index_ == shape_.size())
+                    {
+                        final_index_ = k;
+                    }
                     slice_.push_back(0);
+                    ++n;
                 }
             }
         }
@@ -71,24 +127,32 @@ namespace xvigra
 
         void operator++()
         {
-            index_t k = shape_.size() - 1;
-            ++slice_[k][0];
-            while(slice_[k][0] == shape_[k] && k > 0)
+            for(int k = shape_.size() - 1; k >= final_index_; --k)
             {
-                slice_[k][0] = 0;
-                --k;
-                ++slice_[k][0];
+                auto p = xtl::get_if<int>(&slice_[k]);
+                if(p == nullptr)
+                {
+                    continue;
+                }
+                ++(*p);
+                if(*p < shape_[k] || k == final_index_)
+                {
+                    break;
+                }
+                *p = 0;
             }
         }
 
         bool has_more() const
         {
-            return slice_[0][0] != shape_[0];
+            return (final_index_ != shape_.size()) &&
+                   (*xtl::get_if<int>(&slice_[final_index_]) != shape_[final_index_]);
         }
 
       private:
         shape_type shape_;
         xt::slice_vector slice_;
+        int final_index_;
     };
 
 } // namespace xvigra

@@ -31,7 +31,7 @@
 #include "unittest.hpp"
 #include <xvigra/slicer.hpp>
 
-namespace xvigra 
+namespace xvigra
 {
     TEST(slicer, c_order)
     {
@@ -42,12 +42,9 @@ namespace xvigra
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
                 {
-                    EXPECT_EQ((*nav)[0][0], 0);
-                    EXPECT_EQ((*nav)[0][1], shape[0]);
-                    EXPECT_EQ((*nav)[1][0], k);
-                    EXPECT_EQ((*nav)[1][1], 0);
-                    EXPECT_EQ((*nav)[2][0], i);
-                    EXPECT_EQ((*nav)[2][1], 0);
+                    EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav)[0]), nullptr);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[1]), k);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[2]), i);
                     EXPECT_TRUE(nav.has_more());
                 }
             }
@@ -59,12 +56,9 @@ namespace xvigra
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
                 {
-                    EXPECT_EQ((*nav)[0][0], k);
-                    EXPECT_EQ((*nav)[0][1], 0);
-                    EXPECT_EQ((*nav)[1][0], 0);
-                    EXPECT_EQ((*nav)[1][1], shape[1]);
-                    EXPECT_EQ((*nav)[2][0], i);
-                    EXPECT_EQ((*nav)[2][1], 0);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[0]), k);
+                    EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav)[1]), nullptr);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[2]), i);
                     EXPECT_TRUE(nav.has_more());
                 }
             }
@@ -76,12 +70,9 @@ namespace xvigra
             {
                 for(index_t i=0; i<shape[1]; ++i, ++nav)
                 {
-                    EXPECT_EQ((*nav)[0][0], k);
-                    EXPECT_EQ((*nav)[0][1], 0);
-                    EXPECT_EQ((*nav)[1][0], i);
-                    EXPECT_EQ((*nav)[1][1], 0);
-                    EXPECT_EQ((*nav)[2][0], 0);
-                    EXPECT_EQ((*nav)[2][1], shape[2]);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[0]), k);
+                    EXPECT_EQ(*xtl::get_if<int>(&(*nav)[1]), i);
+                    EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav)[2]), nullptr);
                     EXPECT_TRUE(nav.has_more());
                 }
             }
