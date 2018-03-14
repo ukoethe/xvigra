@@ -444,6 +444,26 @@ namespace xvigra
         detail::distance_transform_impl(in, out, pixel_pitch);
     }
 
+    template <class InArray, class OutArray,
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    void
+    grayscale_erosion(multi_channel_handle<InArray> const & in,
+                      multi_channel_handle<OutArray> const & out, double sigma)
+    {
+        std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
+
+        slicer inav(in.data.shape()),
+               onav(out.data.shape());
+        inav.bind_axis(in.channel_axis);
+        onav.bind_axis(out.channel_axis);
+
+        for(; inav.has_more(); ++inav, ++onav)
+        {
+            detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
+                                            xt::dynamic_view(out.data, *onav), pixel_pitch);
+        }
+    }
+
     /**********************/
     /* grayscale_dilation */
     /**********************/
@@ -526,6 +546,26 @@ namespace xvigra
     {
         std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
         detail::distance_transform_impl(in, out, pixel_pitch, true);
+    }
+
+    template <class InArray, class OutArray,
+              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    void
+    grayscale_dilation(multi_channel_handle<InArray> const & in,
+                       multi_channel_handle<OutArray> const & out, double sigma)
+    {
+        std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
+
+        slicer inav(in.data.shape()),
+               onav(out.data.shape());
+        inav.bind_axis(in.channel_axis);
+        onav.bind_axis(out.channel_axis);
+
+        for(; inav.has_more(); ++inav, ++onav)
+        {
+            detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
+                                            xt::dynamic_view(out.data, *onav), pixel_pitch, true);
+        }
     }
 
     /*********************/

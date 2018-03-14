@@ -77,6 +77,37 @@ namespace xvigra
         tags::skip_initialization_tag  dont_init;
     }
 
+    /*****************/
+    /* multi_channel */
+    /*****************/
+
+    template <class ARRAY>
+    struct multi_channel_handle
+    {
+        ARRAY data;
+        index_t channel_axis;
+
+        template <class A>
+        multi_channel_handle(A && a, index_t c)
+        : data(std::forward<A>(a))
+        , channel_axis(c)
+        {}
+    };
+
+    template <class ARRAY>
+    inline auto
+    multi_channel(ARRAY && a)
+    {
+        return multi_channel_handle<ARRAY>(std::forward<ARRAY>(a), a.dimension()-1);
+    }
+
+    template <class ARRAY>
+    inline auto
+    multi_channel(ARRAY && a, index_t c)
+    {
+        return multi_channel_handle<ARRAY>(std::forward<ARRAY>(a), c);
+    }
+
     /********************/
     /* rebind_container */
     /********************/
