@@ -49,34 +49,27 @@ namespace xvigra
         using shape_type = xt::dynamic_shape<std::size_t>;
 
         template <class SHAPE>
-        slicer(SHAPE const & shape, index_t free_axis)
-        : shape_(shape.begin(), shape.end())
-        , final_index_(shape_.size())
-        {
-            this->free_axis(free_axis);
-        }
-
-        template <class SHAPE>
         slicer(SHAPE const & shape)
         : shape_(shape.begin(), shape.end())
         , final_index_(shape_.size())
         {}
 
-        void free_axis(index_t axis)
+        void set_free_axis(index_t axis)
         {
-            free_axes(std::array<index_t, 1>{axis});
+            set_free_axes(std::array<index_t, 1>{axis});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
-        void free_axes(C axes)
+        void set_free_axes(C axes)
         {
+            slice_.clear();
+            final_index_ = shape_.size();
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
             {
                 if(n < axes.size() && k == axes[n])
                 {
-                    shape_[k] = 1;
                     slice_.push_back(xt::all());
                     ++n;
                 }
@@ -91,21 +84,22 @@ namespace xvigra
             }
         }
 
-        void iterate_axis(index_t axis)
+        void set_iterate_axis(index_t axis)
         {
-            iterate_axes(std::array<index_t, 1>{axis});
+            set_iterate_axes(std::array<index_t, 1>{axis});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
-        void iterate_axes(C axes)
+        void set_iterate_axes(C axes)
         {
+            slice_.clear();
+            final_index_ = shape_.size();
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
             {
                 if(n < axes.size() && k != axes[n])
                 {
-                    shape_[k] = 1;
                     slice_.push_back(xt::all());
                 }
                 else

@@ -37,7 +37,8 @@ namespace xvigra
     {
         xt::dynamic_shape<std::size_t> shape{2,3,4};
         {
-            slicer nav(shape, 0);
+            slicer nav(shape);
+            nav.set_free_axis(0);
             for(index_t k=0; k<shape[1]; ++k)
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
@@ -51,7 +52,8 @@ namespace xvigra
             EXPECT_FALSE(nav.has_more());
         }
         {
-            slicer nav(shape, 1);
+            slicer nav(shape);
+            nav.set_free_axis(1);
             for(index_t k=0; k<shape[0]; ++k)
             {
                 for(index_t i=0; i<shape[2]; ++i, ++nav)
@@ -65,7 +67,8 @@ namespace xvigra
             EXPECT_FALSE(nav.has_more());
         }
         {
-            slicer nav(shape, 2);
+            slicer nav(shape);
+            nav.set_free_axis(2);
             for(index_t k=0; k<shape[0]; ++k)
             {
                 for(index_t i=0; i<shape[1]; ++i, ++nav)

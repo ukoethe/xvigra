@@ -60,7 +60,7 @@ namespace xvigra
 
         // 'in' contains initial squared distances or infinity (approximated by a large number).
         // 'out' will contain updated squared distances.
-        // When 'invert=true', the parabolas open downwards (needed for dilation), otherwise 
+        // When 'invert=true', the parabolas open downwards (needed for dilation), otherwise
         // upwards (needed for distance transform and erosion)
         template <class InArray, class OutArray>
         void distance_parabola(InArray const & in, OutArray && out, double sigma, bool invert=false)
@@ -136,7 +136,7 @@ namespace xvigra
         /***************************/
 
         template <class InArray, class OutArray, class SigmaArray>
-        void distance_transform_impl(InArray const & in, OutArray && out, 
+        void distance_transform_impl(InArray const & in, OutArray && out,
                                      SigmaArray const & sigmas, bool invert = false)
         {
             // Sigma is the spread of the parabolas. It determines the structuring element size
@@ -149,8 +149,11 @@ namespace xvigra
             using dest_type = typename std::decay_t<OutArray>::value_type;
             using tmp_type = xt::real_promote_type_t<dest_type>;
 
+            slicer nav(shape);
+
             // operate on last dimension first
-            for(slicer nav(shape, N-1 ); nav.has_more(); ++nav)
+            nav.set_free_axis(N-1);
+            for(; nav.has_more(); ++nav)
             {
                 // First copy source for better cache locality (FIXME: check this!).
                 // Invert the values if necessary (only needed for grayscale morphology).
@@ -162,7 +165,8 @@ namespace xvigra
             // operate on further dimensions
             for( index_t d = N-2; d >= 0; --d )
             {
-                for(slicer nav(shape, d); nav.has_more(); ++nav)
+                nav.set_free_axis(d);
+                for(; nav.has_more(); ++nav)
                 {
                     xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(out, *nav);
 
@@ -254,7 +258,7 @@ namespace xvigra
 
     template <class InArray, class OutArray, class PitchArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void distance_transform_squared(InArray const & in, OutArray && out, 
+    void distance_transform_squared(InArray const & in, OutArray && out,
                                     bool background, PitchArray const & pixel_pitch)
     {
         index_t N = in.shape().size();
@@ -309,7 +313,7 @@ namespace xvigra
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void distance_transform_squared(InArray const & in, OutArray && out, 
+    void distance_transform_squared(InArray const & in, OutArray && out,
                                     bool background = false)
     {
         std::vector<double> pixel_pitch(in.shape().size(), 1.0);
@@ -326,7 +330,7 @@ namespace xvigra
     */
     template <class InArray, class OutArray, class PitchArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void distance_transform(InArray const & in, OutArray && out, 
+    void distance_transform(InArray const & in, OutArray && out,
                             bool background, PitchArray const & pixel_pitch)
     {
         distance_transform_squared(in, out, background, pixel_pitch);
@@ -335,7 +339,7 @@ namespace xvigra
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void distance_transform(InArray const & in, OutArray && out, 
+    void distance_transform(InArray const & in, OutArray && out,
                             bool background = false)
     {
         distance_transform_squared(in, out, background);
