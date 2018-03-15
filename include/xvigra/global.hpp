@@ -70,6 +70,8 @@ namespace xvigra
         struct tiny_vector_tag {};
 
         struct skip_initialization_tag {};
+
+        enum memory_order { c_order = 1, f_order = 2 };
     }
 
     namespace
