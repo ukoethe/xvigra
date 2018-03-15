@@ -152,7 +152,7 @@ namespace xvigra
             slicer nav(shape);
 
             // operate on last dimension first
-            nav.set_free_axis(N-1);
+            nav.set_free_axes(N-1);
             for(; nav.has_more(); ++nav)
             {
                 // First copy source for better cache locality (FIXME: check this!).
@@ -165,7 +165,7 @@ namespace xvigra
             // operate on further dimensions
             for( index_t d = N-2; d >= 0; --d )
             {
-                nav.set_free_axis(d);
+                nav.set_free_axes(d);
                 for(; nav.has_more(); ++nav)
                 {
                     xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(out, *nav);

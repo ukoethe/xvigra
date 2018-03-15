@@ -454,8 +454,8 @@ namespace xvigra
 
         slicer inav(in.data.shape()),
                onav(out.data.shape());
-        inav.set_iterate_axis(in.channel_axis);
-        onav.set_iterate_axis(out.channel_axis);
+        inav.set_iterate_axes(in.channel_axis);
+        onav.set_iterate_axes(out.channel_axis);
 
         for(; inav.has_more(); ++inav, ++onav)
         {
@@ -558,8 +558,8 @@ namespace xvigra
 
         slicer inav(in.data.shape()),
                onav(out.data.shape());
-        inav.set_iterate_axis(in.channel_axis);
-        onav.set_iterate_axis(out.channel_axis);
+        inav.set_iterate_axes(in.channel_axis);
+        onav.set_iterate_axes(out.channel_axis);
 
         for(; inav.has_more(); ++inav, ++onav)
         {

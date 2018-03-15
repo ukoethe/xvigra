@@ -44,27 +44,37 @@ namespace xvigra
 
     class slicer
     {
-        // FIXME: support C- and F-order, higher dimensional slices
       public:
         using shape_type = xt::dynamic_shape<std::size_t>;
 
         template <class SHAPE>
-        slicer(SHAPE const & shape)
+        slicer(SHAPE const & shape, tags::memory_order order=tags::c_order)
         : shape_(shape.begin(), shape.end())
-        , final_index_(shape_.size())
+        , iter_inc_(order == tags::c_order ? -1 : 1)
         {}
 
-        void set_free_axis(index_t axis)
+        template <class ... T>
+        void set_free_axes(index_t a, T ... r)
         {
-            set_free_axes(std::array<index_t, 1>{axis});
+            set_free_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
         void set_free_axes(C axes)
         {
+            if(iter_inc_ < 0)
+            {
+                start_axis_ = shape_.size() - 1;
+                end_axis_ = -1;
+            }
+            else
+            {
+                start_axis_ = 0;
+                end_axis_ = shape_.size();
+            }
             slice_.clear();
-            final_index_ = shape_.size();
+
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
             {
@@ -75,39 +85,42 @@ namespace xvigra
                 }
                 else
                 {
-                    if(final_index_ == shape_.size())
-                    {
-                        final_index_ = k;
-                    }
                     slice_.push_back(0);
                 }
             }
         }
 
-        void set_iterate_axis(index_t axis)
+        template <class ... T>
+        void set_iterate_axes(index_t a, T ... r)
         {
-            set_iterate_axes(std::array<index_t, 1>{axis});
+            set_iterate_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
         }
 
         template <class C,
                   VIGRA_REQUIRE<container_concept<C>::value>>
         void set_iterate_axes(C axes)
         {
+            if(iter_inc_ < 0)
+            {
+                start_axis_ = shape_.size() - 1;
+                end_axis_ = -1;
+            }
+            else
+            {
+                start_axis_ = 0;
+                end_axis_ = shape_.size();
+            }
             slice_.clear();
-            final_index_ = shape_.size();
+
             std::sort(axes.begin(), axes.end());
             for(index_t k=0, n=0; k < shape_.size(); ++k)
             {
-                if(n < axes.size() && k != axes[n])
+                if(n >= axes.size() || k != axes[n])
                 {
                     slice_.push_back(xt::all());
                 }
                 else
                 {
-                    if(final_index_ == shape_.size())
-                    {
-                        final_index_ = k;
-                    }
                     slice_.push_back(0);
                     ++n;
                 }
@@ -121,7 +134,8 @@ namespace xvigra
 
         void operator++()
         {
-            for(int k = shape_.size() - 1; k >= final_index_; --k)
+            int k = start_axis_;
+            for(; k != end_axis_; k += iter_inc_)
             {
                 auto p = xtl::get_if<int>(&slice_[k]);
                 if(p == nullptr)
@@ -129,24 +143,32 @@ namespace xvigra
                     continue;
                 }
                 ++(*p);
-                if(*p < shape_[k] || k == final_index_)
+                if(*p < shape_[k])
                 {
                     break;
                 }
                 *p = 0;
             }
+            if(k == end_axis_)
+            {
+                start_axis_ = end_axis_;
+            }
+        }
+
+        void operator++(int)
+        {
+            ++(*this);
         }
 
         bool has_more() const
         {
-            return (final_index_ != shape_.size()) &&
-                   (*xtl::get_if<int>(&slice_[final_index_]) != shape_[final_index_]);
+            return start_axis_ != end_axis_;
         }
 
       private:
         shape_type shape_;
         xt::slice_vector slice_;
-        int final_index_;
+        int iter_inc_, start_axis_, end_axis_;
     };
 
 } // namespace xvigra
