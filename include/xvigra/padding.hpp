@@ -66,13 +66,19 @@ namespace xvigra
         vigra_precondition(left_padding_size + size + right_padding_size == out.size(),
             "copy_with_padding(): output size must equal input size plus padding sizes.");
 
-        std::copy(in.begin(), in.end(), out.begin()+left_padding_size);
+        for(index_t k=0; k<in.shape()[0]; ++k)
+        {
+            out(k+left_padding_size) = in(k);
+        }
 
         switch(left_padding_mode)
         {
             case zero_padding:
             {
-                std::fill(out.begin(), out.begin()+left_padding_size, dest_type());
+                for(index_t k=0; k<left_padding_size; ++k)
+                {
+                    out(k) = dest_type();
+                }
                 break;
             }
             case repeat_padding:
@@ -80,7 +86,10 @@ namespace xvigra
                 vigra_precondition(size > 0,
                     "copy_with_padding(): input size must be non-zero.");
 
-                std::fill(out.begin(), out.begin()+left_padding_size, dest_type(in(0)));
+                for(index_t k=0; k<left_padding_size; ++k)
+                {
+                    out(k) = conditional_cast<std::is_arithmetic<dest_type>::value, dest_type>(in(0));
+                }
                 break;
             }
             case periodic_padding:
@@ -123,7 +132,10 @@ namespace xvigra
         {
             case zero_padding:
             {
-                std::fill(out.begin()+size+right_padding_size, out.end(), dest_type());
+                for(index_t k=size+left_padding_size; k<out.shape()[0]; ++k)
+                {
+                    out(k) = dest_type();
+                }
                 break;
             }
             case repeat_padding:
@@ -131,7 +143,10 @@ namespace xvigra
                 vigra_precondition(size > 0,
                     "copy_with_padding(): input size must be non-zero.");
 
-                std::fill(out.begin()+size+left_padding_size, out.end(), dest_type(in(size-1)));
+                for(index_t k=size+left_padding_size; k<out.shape()[0]; ++k)
+                {
+                    out(k) = conditional_cast<std::is_arithmetic<dest_type>::value, dest_type>(in(size-1));
+                }
                 break;
             }
             case periodic_padding:
