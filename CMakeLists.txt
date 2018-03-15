@@ -41,3 +41,10 @@ if(BUILD_TESTS)
     add_subdirectory(test)
 endif()
 
+OPTION(BUILD_BENCHMARK "build xvigra benchmark" OFF)
+
+if(BUILD_BENCHMARK)
+    find_package(benchmark REQUIRED)
+
+    add_subdirectory(benchmark)
+endif()

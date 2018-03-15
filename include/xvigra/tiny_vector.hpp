@@ -339,6 +339,7 @@ namespace xvigra
         tiny_vector_impl();
 
         explicit tiny_vector_impl(size_type n);
+        explicit tiny_vector_impl(tags::skip_initialization_tag);
         tiny_vector_impl(size_type n, const value_type& v);
         tiny_vector_impl(size_type n, tags::skip_initialization_tag);
 
@@ -1674,6 +1675,11 @@ namespace xvigra
         std::ignore = n;
         XVIGRA_ASSERT_MSG(n == size(), "tiny_vector_impl(n): size mismatch");
     }
+
+    template <class V, index_t N>
+    inline
+    tiny_vector_impl<V, N, std::array<V, (size_t)N>>::tiny_vector_impl(tags::skip_initialization_tag)
+    {}
 
     template <class V, index_t N>
     inline
