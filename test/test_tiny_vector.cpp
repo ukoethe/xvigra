@@ -359,6 +359,8 @@ namespace xvigra
         D d(a);
         E e(data.data(), s);
         std::vector<int> v(data.begin(), data.end());
+        xt::svector<int> sv(data.begin(), data.end());
+        xt::uvector<int> uv(data.begin(), data.end());
 
         EXPECT_EQ(b, a);
         EXPECT_EQ(c, a);
@@ -374,6 +376,16 @@ namespace xvigra
         EXPECT_EQ(B(v), a);
         EXPECT_EQ(C(v), a);
         EXPECT_EQ(D(v), a);
+
+        EXPECT_EQ(A(sv), a);
+        EXPECT_EQ(B(sv), a);
+        EXPECT_EQ(C(sv), a);
+        EXPECT_EQ(D(v), a);
+
+        EXPECT_EQ(A(uv), a);
+        EXPECT_EQ(B(uv), a);
+        EXPECT_EQ(C(uv), a);
+        EXPECT_EQ(D(uv), a);
 
         EXPECT_EQ((A{1,2,3,4}), a);
         EXPECT_EQ((B{1,2,3,4}), a);
@@ -396,6 +408,19 @@ namespace xvigra
         EXPECT_EQ((c = v), a);
         EXPECT_EQ((d = v), a);
         EXPECT_EQ((e = v), a);
+
+        a = b = c = d = 1;
+        EXPECT_EQ((a = sv), (A{1,2,3,4}));
+        EXPECT_EQ((b = sv), a);
+        EXPECT_EQ((c = sv), a);
+        EXPECT_EQ((d = sv), a);
+
+        a = b = c = d = 1;
+        EXPECT_EQ((a = uv), (A{1,2,3,4}));
+        EXPECT_EQ((b = uv), a);
+        EXPECT_EQ((c = uv), a);
+        EXPECT_EQ((d = uv), a);
+
 
         b[s-1] = 5;
         EXPECT_EQ(b, (A{1,2,3,5}));

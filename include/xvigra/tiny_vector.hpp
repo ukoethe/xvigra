@@ -94,6 +94,12 @@ namespace xvigra
         template <class T, std::size_t M>
         tiny_vector(std::array<T, M> const & v);
 
+        template <class T, std::size_t M, class A, bool I>
+        tiny_vector(xt::svector<T, M, A, I> const & v);
+
+        template <class T, class A>
+        tiny_vector(xt::uvector<T, A> const & v);
+
         tiny_vector & operator=(tiny_vector const & rhs);
         tiny_vector & operator=(tiny_vector && rhs);
 
@@ -104,6 +110,12 @@ namespace xvigra
 
         template <class T, std::size_t M>
         tiny_vector & operator=(std::array<T, M> const & v);
+
+        template <class T, std::size_t M, class A, bool I>
+        tiny_vector & operator=(xt::svector<T, M, A, I> const & v);
+
+        template <class T, class A>
+        tiny_vector & operator=(xt::uvector<T, A> const & v);
 
         template <class U, index_t M, class R>
         tiny_vector & operator=(tiny_vector<U, M, R> const & rhs);
@@ -952,6 +964,22 @@ namespace xvigra
     }
 
     template <class V, index_t N, class R>
+    template <class T, std::size_t M, class A, bool I>
+    inline
+    tiny_vector<V, N, R>::tiny_vector(xt::svector<T, M, A, I> const & v)
+    : base_type(v.cbegin(), v.cend())
+    {
+    }
+
+    template <class V, index_t N, class R>
+    template <class T, class A>
+    inline
+    tiny_vector<V, N, R>::tiny_vector(xt::uvector<T, A> const & v)
+    : base_type(v.cbegin(), v.cend())
+    {
+    }
+
+    template <class V, index_t N, class R>
     inline auto
     tiny_vector<V, N, R>::operator=(tiny_vector const & v) -> tiny_vector &
     {
@@ -988,6 +1016,24 @@ namespace xvigra
     template <class T, std::size_t M>
     inline auto
     tiny_vector<V, N, R>::operator=(std::array<T, M> const & v) -> tiny_vector &
+    {
+        base_type::assign(v.cbegin(), v.cend());
+        return *this;
+    }
+
+    template <class V, index_t N, class R>
+    template <class T, std::size_t M, class A, bool I>
+    inline auto
+    tiny_vector<V, N, R>::operator=(xt::svector<T, M, A, I> const & v) -> tiny_vector &
+    {
+        base_type::assign(v.cbegin(), v.cend());
+        return *this;
+    }
+
+    template <class V, index_t N, class R>
+    template <class T, class A>
+    inline auto
+    tiny_vector<V, N, R>::operator=(xt::uvector<T, A> const & v) -> tiny_vector &
     {
         base_type::assign(v.cbegin(), v.cend());
         return *this;
