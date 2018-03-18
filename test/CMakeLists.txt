@@ -7,6 +7,10 @@
 # message(STATUS "BLAS VENDOR:    " ${BLA_VENDOR})  # optional
 # message(STATUS "BLAS LIBRARIES: " ${BLAS_LIBRARIES})  # optional
 
+SET(XVIGRA_TEST_DATA
+    color_image.tif
+)
+
 set(XVIGRA_TESTS
     main.cpp
     test_concepts.cpp
@@ -17,7 +21,6 @@ set(XVIGRA_TESTS
     test_math.cpp
     test_morphology.cpp
     test_padding.cpp
-    test_separable_convolution.cpp
     test_slicer.cpp
     test_splines.cpp
     test_tiny_vector.cpp
@@ -29,3 +32,9 @@ target_link_libraries(test_xvigra xvigra xtensor_io ${BUILD_TESTS})
 # target_link_libraries(test_xvigra xvigra xtensor_io ${BUILD_TESTS} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 add_custom_target(xtest COMMAND test_xvigra DEPENDS test_xvigra)
+
+FOREACH(file ${XVIGRA_TEST_DATA})
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${file}
+                   ${CMAKE_CURRENT_BINARY_DIR}/${file}
+                   COPYONLY)
+ENDFOREACH(file)
