@@ -274,6 +274,7 @@ namespace xvigra
             inf += sq(pixel_pitch[k]*in.shape()[k]);
         }
 
+        using in_type = typename std::decay_t<InArray>::value_type;
         using out_type = typename std::decay_t<OutArray>::value_type;
         auto lowest  = std::numeric_limits<out_type>::lowest(),
              highest = std::numeric_limits<out_type>::max();
@@ -284,11 +285,11 @@ namespace xvigra
             rebind_container_t<OutArray, tmp_type> tmp(out.shape());
             if(background)
             {
-                tmp = where(equal(in, 0), inf, 0.0);
+                tmp = where(equal(in, in_type()), inf, 0.0);
             }
             else
             {
-                tmp = where(not_equal(in, 0), inf, 0.0);
+                tmp = where(not_equal(in, in_type()), inf, 0.0);
             }
 
             detail::distance_transform_impl(tmp, tmp, pixel_pitch);
@@ -300,11 +301,11 @@ namespace xvigra
             // work directly on the destination array
             if(background)
             {
-                out = where(equal(in, 0), inf, 0.0);
+                out = where(equal(in, in_type()), inf, 0.0);
             }
             else
             {
-                out = where(not_equal(in, 0), inf, 0.0);
+                out = where(not_equal(in, in_type()), inf, 0.0);
             }
 
             detail::distance_transform_impl(out, out, pixel_pitch);

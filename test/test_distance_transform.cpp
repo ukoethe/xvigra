@@ -28,6 +28,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <cstddef>
 #include "unittest.hpp"
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xarray.hpp>
@@ -35,7 +36,7 @@
 #include <xvigra/distance_transform.hpp>
 #include "test_distance_transform_data.hpp"
 
-namespace xvigra 
+namespace xvigra
 {
     TEST(distance_transform, impl_1d)
     {
@@ -113,9 +114,9 @@ namespace xvigra
 
  #if 0
     void testDistanceVolumes()
-    {    
+    {
         DoubleVolume dt(volume.shape()), desired(volume.shape());
-        DoubleVecVolume vecDesired(volume.shape()); 
+        DoubleVecVolume vecDesired(volume.shape());
         for(unsigned k = 0; k<pointslists.size(); ++k)
         {
             DoubleVolume::iterator i = desired.begin();
@@ -146,7 +147,7 @@ namespace xvigra
             {
                 //test vectorial distance
                 using functor::Arg1;
-                DoubleVecVolume vecVolume(volume.shape()); 
+                DoubleVecVolume vecVolume(volume.shape());
                 separableVectorDistance(volume, vecVolume, true);
                 DoubleVolume distVolume(volume.shape());
                 transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
@@ -158,17 +159,17 @@ namespace xvigra
 
         typedef MultiArrayShape<3>::type Shape;
         MultiArrayView<3, double> vol(Shape(12,10,35), volume_data);
-        
+
         MultiArray<3, double> res(vol.shape());
 
         separableMultiDistSquared(vol, res, false);
-                
+
         shouldEqualSequence(res.data(), res.data()+res.elementCount(), ref_dist2);
 
         {
             //test vectorial distance
             using functor::Arg1;
-            DoubleVecVolume vecVolume(vol.shape()); 
+            DoubleVecVolume vecVolume(vol.shape());
             separableVectorDistance(vol, vecVolume, false);
             DoubleVolume distVolume(vol.shape());
             transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
@@ -196,7 +197,7 @@ using namespace vigra;
 struct MultiDistanceTest
 {
     typedef vigra::MultiArray<3,int> IntVolume;
-    typedef vigra::MultiArray<3,double> DoubleVolume; 
+    typedef vigra::MultiArray<3,double> DoubleVolume;
     typedef vigra::MultiArray<2,double> Double2DArray;
     typedef vigra::DImage Image;
     typedef vigra::MultiArrayView<2,Image::value_type> ImageView;
@@ -207,11 +208,11 @@ struct MultiDistanceTest
 
 
 #if 1
-    enum { WIDTH    =   15,  // 
+    enum { WIDTH    =   15,  //
            HEIGHT   =   15,  // Volume-Dimensionen
            DEPTH    =   15}; //
 #else
-    enum { WIDTH    =   4,  // 
+    enum { WIDTH    =   4,  //
            HEIGHT   =   4,  // Volume-Dimensionen
            DEPTH    =   1}; //
 #endif
@@ -246,7 +247,7 @@ struct MultiDistanceTest
         temp.push_back(IntVec(WIDTH/2, HEIGHT/2, DEPTH-1));
         temp.push_back(IntVec(WIDTH/2, HEIGHT-1, DEPTH/2));
         pointslists.push_back(temp);
-    
+
 
         static const double in[] = {
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -268,7 +269,7 @@ struct MultiDistanceTest
                 acc.set(*p, i);
             }
         }
-        
+
         static const unsigned char in2[] = {
             1, 0, 0, 0, 0, 0, 1,
             1, 0, 0, 0, 0, 0, 1,
@@ -319,9 +320,9 @@ struct MultiDistanceTest
     }
 
     void testDistanceVolumes()
-    {    
+    {
         DoubleVolume dt(volume.shape()), desired(volume.shape());
-        DoubleVecVolume vecDesired(volume.shape()); 
+        DoubleVecVolume vecDesired(volume.shape());
         for(unsigned k = 0; k<pointslists.size(); ++k)
         {
             DoubleVolume::iterator i = desired.begin();
@@ -352,7 +353,7 @@ struct MultiDistanceTest
             {
                 //test vectorial distance
                 using functor::Arg1;
-                DoubleVecVolume vecVolume(volume.shape()); 
+                DoubleVecVolume vecVolume(volume.shape());
                 separableVectorDistance(volume, vecVolume, true);
                 DoubleVolume distVolume(volume.shape());
                 transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
@@ -364,17 +365,17 @@ struct MultiDistanceTest
 
         typedef MultiArrayShape<3>::type Shape;
         MultiArrayView<3, double> vol(Shape(12,10,35), volume_data);
-        
+
         MultiArray<3, double> res(vol.shape());
 
         separableMultiDistSquared(vol, res, false);
-                
+
         shouldEqualSequence(res.data(), res.data()+res.elementCount(), ref_dist2);
 
         {
             //test vectorial distance
             using functor::Arg1;
-            DoubleVecVolume vecVolume(vol.shape()); 
+            DoubleVecVolume vecVolume(vol.shape());
             separableVectorDistance(vol, vecVolume, false);
             DoubleVolume distVolume(vol.shape());
             transformMultiArray(vecVolume, distVolume, squaredNorm(Arg1()));
@@ -387,10 +388,10 @@ struct MultiDistanceTest
         using namespace vigra::functor;
         typedef MultiArrayShape<3>::type Shape;
         MultiArrayView<3, double> vol(Shape(12,10,35), volume_data);
-        
+
         MultiArray<3, double> res1(vol.shape()), res2(vol.shape());
-        DoubleVecVolume vecVolume(reverse(vol.shape())); 
-        
+        DoubleVecVolume vecVolume(reverse(vol.shape()));
+
         separableMultiDistSquared(vol, res1, true);
         separableMultiDistSquared(vol.transpose(), res2.transpose(), true);
         shouldEqualSequence(res1.data(), res1.data()+res1.elementCount(), res2.data());
@@ -429,10 +430,10 @@ struct MultiDistanceTest
     }
 
     void testDistanceVolumesAnisotropic()
-    {    
+    {
         double epsilon = 1e-14;
         TinyVector<double, 3> pixelPitch(1.2, 1.0, 2.4);
-        
+
         DoubleVolume res(volume.shape()), desired(volume.shape());
         for(unsigned k = 0; k<pointslists.size(); ++k)
         {
@@ -464,7 +465,7 @@ struct MultiDistanceTest
             {
                 //test vectorial distance
                 using namespace functor;
-                DoubleVecVolume vecVolume(volume.shape()); 
+                DoubleVecVolume vecVolume(volume.shape());
                 separableVectorDistance(volume, vecVolume, true, pixelPitch);
                 DoubleVolume distVolume(volume.shape());
                 transformMultiArray(vecVolume, distVolume, squaredNorm(Param(pixelPitch)*Arg1()));
@@ -498,7 +499,7 @@ struct MultiDistanceTest
     void distanceTest1D()
     {
         vigra::MultiArray<2,double> res(img2);
-        
+
         static const int desired[] = {3, 2, 1, 0, 1, 2, 3};
         separableMultiDistance(img2, res, true);
         shouldEqualSequence(res.begin(), res.end(), desired);
@@ -508,7 +509,7 @@ struct MultiDistanceTest
 struct BoundaryMultiDistanceTest
 {
     typedef vigra::MultiArray<3,int> IntVolume;
-    typedef vigra::MultiArray<3,double> DoubleVolume; 
+    typedef vigra::MultiArray<3,double> DoubleVolume;
     typedef vigra::MultiArray<2,double> Double2DArray;
     typedef vigra::MultiArray<1,double> Double1DArray;
     typedef vigra::DImage Image;
@@ -516,11 +517,11 @@ struct BoundaryMultiDistanceTest
     typedef vigra::TinyVector<int,3> IntVec;
 
 #if 1
-    enum { WIDTH    =   50,  // 
+    enum { WIDTH    =   50,  //
            HEIGHT   =   50,  // Volume-Dimensionen
            DEPTH    =   1}; //
 #else
-    enum { WIDTH    =   4,  // 
+    enum { WIDTH    =   4,  //
            HEIGHT   =   4,  // Volume-Dimensionen
            DEPTH    =   1}; //
 #endif
@@ -555,7 +556,7 @@ struct BoundaryMultiDistanceTest
         temp.push_back(IntVec(WIDTH/2, HEIGHT/2, DEPTH-1));
         temp.push_back(IntVec(WIDTH/2, HEIGHT-1, DEPTH/2));
         pointslists.push_back(temp);
-    
+
 
         static const double in[] = {
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -577,7 +578,7 @@ struct BoundaryMultiDistanceTest
                 acc.set(*p, i);
             }
         }
-        
+
         static const unsigned char in2[] = {
             1, 0, 0, 0, 0, 0, 1,
             1, 0, 0, 0, 0, 0, 1,
@@ -628,9 +629,9 @@ struct BoundaryMultiDistanceTest
     }
 
     void testDistanceVolumes()
-    {    
+    {
         using namespace multi_math;
-        MultiArrayView<2, double> vol(Shape2(50,50), bndMltDst_data);    
+        MultiArrayView<2, double> vol(Shape2(50,50), bndMltDst_data);
         MultiArray<2, double> res(vol.shape());
 
         boundaryMultiDistance(vol, res);
@@ -639,7 +640,7 @@ struct BoundaryMultiDistanceTest
         boundaryMultiDistance(vol, res, true);
         shouldEqualSequenceTolerance(res.begin(), res.end(), bndMltDstArrayBorder_ref, 1e-6);
 
-        
+
         MultiArray<2, double> res2(vol.shape());
         MultiArray<2, TinyVector<double, 2> > res_vec(vol.shape());
 
@@ -647,12 +648,12 @@ struct BoundaryMultiDistanceTest
         boundaryVectorDistance(vol, res_vec, false, InterpixelBoundary);
         res2 = norm(res_vec);
         shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 0.25); // FIXME: REQUIRE this -- 0.25 is a lot
-            
+
         boundaryMultiDistance(vol, res, false, OuterBoundary);
         boundaryVectorDistance(vol, res_vec, false, OuterBoundary);
         res2 = norm(res_vec);
         shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 1e-15);
-            
+
         boundaryMultiDistance(vol, res, false, InnerBoundary);
         boundaryVectorDistance(vol, res_vec, false, InnerBoundary);
         res2 = norm(res_vec);
@@ -667,12 +668,12 @@ struct BoundaryMultiDistanceTest
         boundaryVectorDistance(vol, res_vec, true, OuterBoundary);
         res2 = norm(res_vec);
         shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 1e-15);
-            
+
         boundaryMultiDistance(vol, res, true, InnerBoundary);
         boundaryVectorDistance(vol, res_vec, true, InnerBoundary);
         res2 = norm(res_vec);
         shouldEqualSequenceTolerance(res.begin(), res.end(), res2.begin(), 1e-15);
-            
+
             // FIXME: add tests for alternative boundary definitions
     }
 
@@ -681,7 +682,7 @@ struct BoundaryMultiDistanceTest
         {
             // OuterBoundary
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {3, 2, 1, 1, 1, 2, 3};
             boundaryMultiDistance(img2, res, false, OuterBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -689,7 +690,7 @@ struct BoundaryMultiDistanceTest
         {
             //InterpixelBoundary
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {2.5, 1.5, 0.5, 0.5, 0.5, 1.5, 2.5};
             boundaryMultiDistance(img2, res);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -697,7 +698,7 @@ struct BoundaryMultiDistanceTest
         {
             // InnerBoundary
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {2, 1, 0, 0, 0, 1, 2};
             boundaryMultiDistance(img2, res, false, InnerBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -705,7 +706,7 @@ struct BoundaryMultiDistanceTest
         {
             //OuterBoundary and image border
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {1, 2, 1, 1, 1, 2, 1};
             boundaryMultiDistance(img2, res, true, OuterBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -713,7 +714,7 @@ struct BoundaryMultiDistanceTest
         {
             //InterpixelBoundary and image border
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {0.5, 1.5, 0.5, 0.5, 0.5, 1.5, 0.5};
             boundaryMultiDistance(img2, res, true);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -721,7 +722,7 @@ struct BoundaryMultiDistanceTest
         {
             //InnerBoundary and image border
             Double1DArray res(img2.shape());
-        
+
             static const float desired[] = {0, 1, 0, 0, 0, 1, 0};
             boundaryMultiDistance(img2, res, true, InnerBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -734,7 +735,7 @@ struct BoundaryMultiDistanceTest
         {
             // OuterBoundary
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(3), P(2), P(1), P(1), P(-1), P(-2), P(-3) };
             boundaryVectorDistance(img2, res, false, OuterBoundary);
             //for(int k=0; k<7; ++k)
@@ -745,7 +746,7 @@ struct BoundaryMultiDistanceTest
         {
             //InterpixelBoundary
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(2.5), P(1.5), P(0.5), P(-0.5), P(-0.5), P(-1.5), P(-2.5) };
             boundaryVectorDistance(img2, res, false, InterpixelBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -753,7 +754,7 @@ struct BoundaryMultiDistanceTest
         {
             // InnerBoundary
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(2), P(1), P(0), P(0), P(0), P(-1), P(-2)};
             boundaryVectorDistance(img2, res, false, InnerBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -761,7 +762,7 @@ struct BoundaryMultiDistanceTest
         {
             //OuterBoundary and image border
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(-1), P(2), P(1), P(1), P(-1), P(2), P(1) };
             boundaryVectorDistance(img2, res, true, OuterBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -769,7 +770,7 @@ struct BoundaryMultiDistanceTest
         {
             //InterpixelBoundary and image border
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(-0.5), P(1.5), P(0.5), P(-0.5), P(-0.5), P(1.5), P(0.5)};
             boundaryVectorDistance(img2, res, true, InterpixelBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
@@ -777,7 +778,7 @@ struct BoundaryMultiDistanceTest
         {
             //InnerBoundary and image border
             MultiArray<1, P> res(img2.shape());
-        
+
             static const P desired[] = {P(0), P(1), P(0), P(0), P(0), P(1), P(0) };
             boundaryVectorDistance(img2, res, true, InnerBoundary);
             shouldEqualSequence(res.begin(), res.end(), desired);
