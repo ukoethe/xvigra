@@ -10,17 +10,28 @@ project(xvigra VERSION 0.1 LANGUAGES CXX)
 
 add_library(xvigra INTERFACE)
 
-set(XVIGRA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(XVIGRA_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 
 target_include_directories(xvigra INTERFACE
   $<BUILD_INTERFACE:${XVIGRA_INCLUDE_DIR}>
   $<INSTALL_INTERFACE:include>)
 
-install(DIRECTORY include/ DESTINATION include)
+export(TARGETS xvigra
+  FILE "${PROJECT_BINARY_DIR}/xvigraTargets.cmake")
+
+install(TARGETS xvigra EXPORT xvigraTargets)
+install(EXPORT xvigraTargets DESTINATION lib/cmake/xvigra)
+install(DIRECTORY ${XVIGRA_INCLUDE_DIR}/ DESTINATION include)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
 
 ################
 # dependencies #
 ################
+
+set(XVIGRA_EXTERNALS_PATH "${PROJECT_SOURCE_DIR}/externals" CACHE PATH "path to download external dependencies")
 
 find_package(xtl REQUIRED)
 find_package(xtensor REQUIRED)
@@ -46,12 +57,11 @@ if(BUILD_TESTS)
     if(BUILD_TESTS STREQUAL "gtest")
         find_package(gtest REQUIRED)
     else()
-        set(DOCTEST_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/doctest" CACHE INTERNAL "Path to doctest")
+        set(DOCTEST_SOURCE_DIR "${XVIGRA_EXTERNALS_PATH}/doctest" CACHE PATH "Path to doctest")
         if(NOT EXISTS "${DOCTEST_SOURCE_DIR}")
             message(STATUS "Downloading doctest to '${DOCTEST_SOURCE_DIR}'")
             find_package(Git REQUIRED)
-            execute_process(COMMAND "${GIT_EXECUTABLE}" clone https://github.com/onqtam/doctest
-                            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external")
+            execute_process(COMMAND "${GIT_EXECUTABLE}" clone https://github.com/onqtam/doctest "${DOCTEST_SOURCE_DIR}")
         endif()
 
         add_library(doctest INTERFACE)
@@ -59,11 +69,7 @@ if(BUILD_TESTS)
         target_compile_definitions(doctest INTERFACE XVIGRA_USE_DOCTEST)
     endif()
 
-    # find_package(xtensor-io REQUIRED)
-    add_library(xtensor_io INTERFACE)
-    target_include_directories(xtensor_io INTERFACE "/home/ukoethe/conda/envs/xtensor/include"
-                                                    "/home/ukoethe/src/xtensor-io/include/")
-    target_link_libraries(xtensor_io INTERFACE "/home/ukoethe/conda/envs/xtensor/lib/libOpenImageIO.so")
+    find_package(xtensor-io REQUIRED)
 
     enable_testing()
     add_subdirectory(test)
