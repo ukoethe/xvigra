@@ -31,15 +31,17 @@
 #ifndef XVIGRA_UNITTEST_HPP
 #define XVIGRA_UNITTEST_HPP
 
-#include <xtensor/xio.hpp>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 
-// #define XVIGRA_USE_DOCTEST
+#include <xtensor/xio.hpp>
 
 #ifndef XVIGRA_USE_DOCTEST
 
     #include <gtest/gtest.h>
 
-    #define TYPED_TEST_SETUP(ID, TYPES)        \
+    #define TYPED_TEST_SETUP(ID, TYPES)            \
     template <class T>                             \
     class ID : public testing::Test                \
     {};                                            \
