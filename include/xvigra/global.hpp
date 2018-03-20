@@ -47,12 +47,18 @@ namespace xvigra
 
     constexpr static index_t runtime_size  = -1;
 
-    /***********************/
-    /* tiny_vector forward */
-    /***********************/
+    /************************/
+    /* forward declarations */
+    /************************/
 
     template <class VALUETYPE, index_t N=runtime_size, class REPRESENTATION=void>
     class tiny_vector;
+
+    template <index_t N, class T>
+    class view_nd;
+
+    template <index_t N, class T, class A> // FIXME: define default allocator
+    class array_nd;
 
     /***********/
     /* shape_t */
@@ -72,7 +78,80 @@ namespace xvigra
         struct skip_initialization_tag {};
 
         enum memory_order { c_order = 1, f_order = 2 };
-    }
+
+            // Tags to assign semantic meaning to axes.
+            // (arranged in sorting order)
+        enum axis_tag  { axis_missing = -1,
+                         axis_unknown = 0,
+                         axis_c,  // channel axis
+                         axis_n,  // node map for a graph
+                         axis_x,  // spatial x-axis
+                         axis_y,  // spatial y-axis
+                         axis_z,  // spatial z-axis
+                         axis_t,  // time axis
+                         axis_fx, // Fourier transform of x-axis
+                         axis_fy, // Fourier transform of y-axis
+                         axis_fz, // Fourier transform of z-axis
+                         axis_ft, // Fourier transform of t-axis
+                         axis_e,  // edge map for a graph
+                         axis_end // marker for the end of the list
+                       };
+
+
+            // Support for tags::axis keyword argument to select
+            // the axis an algorithm is supposed to operator on
+        struct axis_selection_proxy
+        {
+            int value;
+        };
+
+        struct axis_selection_tag
+        {
+            axis_selection_proxy operator=(int i) const
+            {
+                return {i};
+            }
+
+            axis_selection_proxy operator()(int i) const
+            {
+                return {i};
+            }
+        };
+
+        namespace
+        {
+            axis_selection_tag axis;
+        }
+
+            // Support for tags::byte_strides keyword argument
+            // to pass strides in units of bytes rather than `sizeof(T)`.
+        template <int N>
+        struct byte_strides_proxy
+        {
+            tiny_vector<index_t, N> value;
+        };
+
+        struct byte_strides_tag
+        {
+            template <int N>
+            byte_strides_proxy<N> operator=(tiny_vector<index_t, N> const & s) const
+            {
+                return {s};
+            }
+
+            template <int N>
+            byte_strides_proxy<N> operator()(tiny_vector<index_t, N> const & s) const
+            {
+                return {s};
+            }
+        };
+
+        namespace
+        {
+            byte_strides_tag byte_strides;
+        }
+
+    } // namespace tags
 
     namespace
     {

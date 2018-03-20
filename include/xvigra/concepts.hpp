@@ -67,13 +67,29 @@ namespace xvigra
                                     detail::container_concept_impl<T>::value>
     {};
 
+    /**********************/
+    /* xt::is_xexpression */
+    /**********************/
+
+    using xt::is_xexpression;
+
     /******************/
     /* tensor_concept */
     /******************/
 
     template <class T>
     struct tensor_concept
-    : public xt::is_xexpression<T>
+    : public std::false_type
+    {};
+
+    template <index_t N, class V>
+    struct tensor_concept<view_nd<N, V>>
+    : public std::true_type
+    {};
+
+    template <index_t N, class V, class A>
+    struct tensor_concept<array_nd<N, V, A>>
+    : public std::true_type
     {};
 
     /***********************/
