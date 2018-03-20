@@ -166,12 +166,16 @@ namespace xvigra
         {
             auto uv = V::template unit_vector<SIZE>(k);
             auto vv = V::unit_vector(SIZE, k);
+            auto ww = unit_vector(uv, k, 2);
             EXPECT_EQ(uv[k], 1);
             EXPECT_EQ(vv[k], 1);
+            EXPECT_EQ(ww[k], 2);
             uv[k] = 0;
             vv[k] = 0;
+            ww[k] = 0;
             EXPECT_TRUE(uv == 0);
             EXPECT_TRUE(vv == 0);
+            EXPECT_TRUE(ww == 0);
         }
 
         V range_ref(SIZE);

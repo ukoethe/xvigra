@@ -2142,9 +2142,9 @@ namespace xvigra
         swap(m_data, other.m_data);
     }
 
-    /********************************************************/
+    /************************************************************/
     /* tiny_vector_impl xt::xbuffer_adaptor view implementation */
-    /********************************************************/
+    /************************************************************/
 
     template <class V, class CP, class O, class A>
     inline void
@@ -2181,6 +2181,20 @@ namespace xvigra
     tiny_vector_impl<V, runtime_size, xt::xbuffer_adaptor<CP, O, A>>::capacity() const -> size_type
     {
         return size();
+    }
+
+    /*************************/
+    /* tiny_vector factories */
+    /*************************/
+
+    template <class V, index_t N, class R, class W = V>
+    inline
+    tiny_vector<V, N>
+    unit_vector(tiny_vector<V, N, R> const & tmpl, index_t axis, W const & w = W(1))
+    {
+        tiny_vector<V, N> res(tmpl.size(), 0);
+        res[axis] = w;
+        return res;
     }
 
     /****************************/
