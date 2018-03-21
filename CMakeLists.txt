@@ -16,12 +16,11 @@ target_include_directories(xvigra INTERFACE
   $<BUILD_INTERFACE:${XVIGRA_INCLUDE_DIR}>
   $<INSTALL_INTERFACE:include>)
 
-export(TARGETS xvigra
-  FILE "${PROJECT_BINARY_DIR}/xvigraTargets.cmake")
+export(TARGETS xvigra FILE "${PROJECT_BINARY_DIR}/xvigraTargets.cmake")
 
 install(TARGETS xvigra EXPORT xvigraTargets)
-install(EXPORT xvigraTargets DESTINATION lib/cmake/xvigra)
-install(DIRECTORY ${XVIGRA_INCLUDE_DIR}/ DESTINATION include)
+install(EXPORT xvigraTargets DESTINATION "lib/cmake/xvigra")
+install(DIRECTORY "${XVIGRA_INCLUDE_DIR}/" DESTINATION "include")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
@@ -49,6 +48,7 @@ find_package(xtensor REQUIRED)
 target_link_libraries(xvigra INTERFACE xtl xtensor)
 
 if(USE_SIMD)
+    MESSAGE(STATUS "using SIMD")
     find_package(xsimd REQUIRED)
     target_link_libraries(xvigra INTERFACE xsimd)
     target_compile_definitions(xvigra INTERFACE XVIGRA_USE_SIMD XTENSOR_USE_XSIMD)
