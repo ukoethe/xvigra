@@ -34,6 +34,7 @@
 #define XVIGRA_ARRAY_ND_HPP
 
 #include <utility>
+#include <numeric>
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xcontainer.hpp>
 #include <xtensor/xsemantic.hpp>
@@ -79,20 +80,6 @@ namespace xt
         using inner_shape_type = xvigra::shape_t<N>;
         using stepper = xindexed_stepper<xvigra::view_nd<N, T>, false>;
         using const_stepper = xindexed_stepper<xvigra::view_nd<N, T>, true>;
-    };
-
-    template <xvigra::index_t N, class T, class A>
-    struct xcontainer_inner_types<xvigra::array_nd<N, T, A>>
-    {
-        using temporary_type = xvigra::array_nd<N, T, A>;
-    };
-
-    template <xvigra::index_t N, class T, class A>
-    struct xiterable_inner_types<xvigra::array_nd<N, T, A>>
-    {
-        using inner_shape_type = xvigra::shape_t<N>;
-        using stepper = xindexed_stepper<xvigra::array_nd<N, T, A>, false>;
-        using const_stepper = xindexed_stepper<xvigra::array_nd<N, T, A>, true>;
     };
 }
 
@@ -230,20 +217,6 @@ namespace xvigra
         : shape_(shape)
         {}
 
-        template <class E,
-                  VIGRA_REQUIRE<is_xexpression<E>::value>>
-        view_nd(E && e)
-        {
-            // semantic_base::assign(std::forward<E>(e));
-        }
-
-    //     // template <class E>
-    //     // self_type& operator=(const xexpression<E>& e)
-    //     // {
-    //     //     return semantic_base::operator=(e);
-    //     // }
-
-
              /** construct from shape and pointer
              */
         view_nd(shape_type const & shape,
@@ -320,57 +293,80 @@ namespace xvigra
             zero_singleton_strides();
         }
 
+        template <class E>
+        self_type& operator=(const xt::xexpression<E>& e)
+        {
+            vigra_precondition(shape() == e.shape(),
+                "view_nd::operator=(): shape mismatch.");
+            return semantic_base::operator=(std::forward<E>(e));
+        }
+
+
             // needed for operator==
         template <class It>
         reference element(It first, It last)
         {
-            return ((pointer)data_)[*first];
+            XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
+                "view_nd::element(): invalid index.");
+            return *(pointer)(data_ + std::inner_product(first, last, strides_.begin(), 0l));
         }
 
             // needed for operator==
         template <class It>
         const_reference element(It first, It last) const
         {
-            return ((const_pointer)data_)[*first];
+            XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
+                "view_nd::element(): invalid index.");
+            return *(const_pointer)(data_ + std::inner_product(first, last, strides_.begin(), 0l));
         }
 
             // needed for operator==
         xt::layout_type layout() const
         {
-            return xt::layout_type::row_major; // FIXME
+            return xt::layout_type::dynamic; // FIXME
         }
 
-        // template <class S>
-        // bool broadcast_shape(S& s) const
-        // {
-        //     return xt::broadcast_shape(shape(), s);
-        // }
+            // needed for semantic_base::assign(expr)
+        static constexpr bool contiguous_layout = false; // FIXME
+        static constexpr xt::layout_type static_layout = xt::layout_type::dynamic; // FIXME
 
-        // template <class S>
-        // constexpr bool is_trivial_broadcast(const S& str) const noexcept
-        // {
-        //     return true;
-        // }
+            // needed for semantic_base::assign(expr)
+        template <class S>
+        bool broadcast_shape(S& s) const
+        {
+            // FIXME: S here is svector
+            return xt::broadcast_shape(shape(), s);
+        }
 
+            // needed for semantic_base::assign(expr)
+        template <class S>
+        constexpr bool is_trivial_broadcast(const S& str) const noexcept
+        {
+            return true; // FIXME: check
+        }
+
+            // needed for operator==
         void reshape(const shape_type& s)
         {
             vigra_precondition(s == shape(),
                 "view_nd::reshape(): invalid target shape.");
         }
 
-        // template <class ST>
-        // stepper stepper_begin(const ST& s)
-        // {
-        //     size_type offset = s.size() - dimension();
-        //     return stepper(this, offset);
-        // }
+            // needed for semantic_base::assign(expr)
+        template <class ST>
+        stepper stepper_begin(const ST& s)
+        {
+            size_type offset = s.size() - dimension();
+            return stepper(this, offset);
+        }
 
-        // template <class ST>
-        // stepper stepper_end(const ST& s, xt::layout_type = xt::layout_type::row_major)
-        // {
-        //     size_type offset = s.size() - dimension();
-        //     return stepper(this, offset, true);
-        // }
+            // needed for semantic_base::assign(expr)
+        template <class ST>
+        stepper stepper_end(const ST& s, xt::layout_type = xt::layout_type::row_major)
+        {
+            size_type offset = s.size() - dimension();
+            return stepper(this, offset, true);
+        }
 
             // needed for operator==
         template <class ST>
@@ -393,7 +389,7 @@ namespace xvigra
         reference operator[](shape_type const & d)
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(pointer)(data_  + dot(d, strides_));
+            return *(pointer)(data_ + dot(d, strides_));
         }
 
             /** Access element via scalar index. Only allowed if
@@ -402,9 +398,9 @@ namespace xvigra
         reference operator[](size_type i)
         {
             if(is_consecutive())
-                return *(pointer)(data_  + i*sizeof(T));
+                return *(pointer)(data_ + i*sizeof(T));
             if(dimension() <= 1)
-                return *(pointer)(data_  + i*strides_[0]);
+                return *(pointer)(data_ + i*strides_[0]);
             vigra_precondition(false,
                 "view_nd::operator[](int) forbidden for strided multi-dimensional arrays.");
         }
@@ -414,7 +410,7 @@ namespace xvigra
         const_reference operator[](shape_type const & d) const
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(const_pointer)(data_  + dot(d, strides_));
+            return *(const_pointer)(data_ + dot(d, strides_));
         }
 
             /** Get element via scalar index. Only allowed if
@@ -423,9 +419,9 @@ namespace xvigra
         const_reference operator[](size_type i) const
         {
             if(is_consecutive())
-                return *(const_pointer)(data_  + i*sizeof(T));
+                return *(const_pointer)(data_ + i*sizeof(T));
             if(dimension() <= 1)
-                return *(const_pointer)(data_  + i*strides_[0]);
+                return *(const_pointer)(data_ + i*strides_[0]);
             vigra_precondition(false,
                 "view_nd::operator[](int) forbidden for strided multi-dimensional arrays.");
         }
@@ -443,7 +439,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(pointer)(data_  + i*strides_[0]);
+            return *(pointer)(data_ + i*strides_[0]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -455,14 +451,14 @@ namespace xvigra
             static const int M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(pointer)(data_  + dot(shape_t<M>(i0, i1, i...), strides_));
+            return *(pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
             /** Access the array's first element.
              */
         const_reference operator()() const
         {
-            return *(pointer)data_;
+            return *(const_pointer)data_;
         }
 
             /** 1D array access. Use only if <tt>dimension() <= 1</tt>.
@@ -471,7 +467,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(const_pointer)(data_  + i*strides_[0]);
+            return *(const_pointer)(data_ + i*strides_[0]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -483,7 +479,7 @@ namespace xvigra
             static const int M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(const_pointer)(data_  + dot(shape_t<M>(i0, i1, i...), strides_));
+            return *(const_pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
             /** Bind 'axis' to 'index'.
@@ -902,9 +898,14 @@ namespace xvigra
             return shape_;
         }
 
-        const shape_type & strides() const
+        shape_type const & byte_strides() const
         {
             return strides_;
+        }
+
+        shape_type strides() const
+        {
+            return strides_ / sizeof(value_type);
         }
 
             /** number of the elements in the array.
@@ -917,18 +918,18 @@ namespace xvigra
     #ifdef DOXYGEN
             /** the array's number of dimensions.
              */
-        int dimension() const;
+        std::size_t dimension() const;
     #else
             // Actually, we use some template magic to turn dimension() into a
             // constexpr when it is known at compile time.
         template <index_t M = N>
-        index_t dimension(std::enable_if_t<M == runtime_size, bool> = true) const
+        std::size_t dimension(std::enable_if_t<M == runtime_size, bool> = true) const
         {
             return shape_.size();
         }
 
         template <index_t M = N>
-        constexpr index_t dimension(std::enable_if_t<(M > runtime_size), bool> = true) const
+        constexpr std::size_t dimension(std::enable_if_t<(M > runtime_size), bool> = true) const
         {
             return N;
         }
@@ -1025,8 +1026,6 @@ namespace xvigra
     template <index_t N, class T, class Alloc>
     class array_nd
     : public view_nd<N, T>
-    , public xt::xview_semantic<array_nd<N, T, Alloc>>
-
     {
       public:
         using view_type = view_nd<N, T>;
@@ -1045,8 +1044,9 @@ namespace xvigra
         using iterator = typename view_type::iterator;
         using const_iterator = typename view_type::const_iterator;
 
-        using self_type = array_nd<N, T, Alloc>;
-        using semantic_base = xt::xview_semantic<self_type>;
+        // using self_type = array_nd<N, T, Alloc>;
+        // using semantic_base = xt::xview_semantic<self_type>;
+        using semantic_base = typename view_type::semantic_base;
 
         using inner_shape_type = shape_type;
         using inner_strides_type = inner_shape_type;
@@ -1106,7 +1106,13 @@ namespace xvigra
         template <class E,
                   VIGRA_REQUIRE<is_xexpression<E>::value>>
         array_nd(E && e)
-        {}
+        : view_type(e.shape(), 0)
+        , allocated_data_(this->size())
+        {
+            this->data_  = (char*)&allocated_data_[0];
+            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            semantic_base::assign(std::forward<E>(e));
+        }
 
 
         //     /** construct from shape with an initial value

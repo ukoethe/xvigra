@@ -42,7 +42,9 @@ namespace xvigra
     constexpr index_t ndim = 3;
     shape_t<> s{4, 3, 2};
 
-    using array_nd_types = testing::Types<array_nd<ndim, uint8_t>
+    using array_nd_types = testing::Types<array_nd<ndim, uint8_t>,
+                                          array_nd<ndim, int>,
+                                          array_nd<ndim, float>
                                          >;
 
     TYPED_TEST_SETUP(array_nd_test, array_nd_types);
@@ -62,26 +64,51 @@ namespace xvigra
         EXPECT_EQ(v0.shape(), S());
         EXPECT_EQ(v0.strides(), S());
         EXPECT_EQ(v0.data(), (T*)0);
+        EXPECT_FALSE(v0.has_data());
 
         V v1(s, &data1[0], tags::c_order);
 
         EXPECT_EQ(v1.shape(), s);
         EXPECT_EQ(v1.strides(), (S{ 6,2,1 }));
+        EXPECT_EQ(v1.byte_strides(), (S{ 6,2,1 }*sizeof(T)));
         EXPECT_EQ(v1.data(), &data1[0]);
+        EXPECT_TRUE(v1.has_data());
         EXPECT_TRUE(v1.is_consecutive());
         EXPECT_FALSE(v1.owns_memory());
-        bool memory_check = v1.memory_range() == tiny_vector<char*, 2>{(char*)&data1.front(), (char*)(1+&data1.back())};
-        EXPECT_TRUE(memory_check);
+        bool memory_range_check = v1.memory_range() == tiny_vector<char*, 2>{(char*)&data1.front(), (char*)(1+&data1.back())};
+        EXPECT_TRUE(memory_range_check);
 
         EXPECT_TRUE(v1 == v1);
         EXPECT_FALSE(v1 != v1);
         EXPECT_TRUE(v1 != v0);
         EXPECT_FALSE(v1 == v0);
-        // A a(s);
 
-        // EXPECT_EQ(a.shape(), s);
+        EXPECT_TRUE(any(v1));
+        EXPECT_FALSE(all(v1));
 
-        // A b(a + 1);
+        A a0(s);
+
+        EXPECT_EQ(a0.shape(), s);
+        EXPECT_FALSE(any(a0));
+        EXPECT_FALSE(all(a0));
+
+        A a1(v1 + 1);
+        int c = 0;
+        for(int z=0; z<s[0]; ++z)
+        {
+            for(int y=0; y<s[1]; ++y)
+            {
+                for(int x=0; x<s[2]; ++x, ++c)
+                {
+                    EXPECT_EQ(v1(z,y,x), c);
+                    EXPECT_EQ(a1(z,y,x), c+1);
+                }
+            }
+        }
+
+        v1 = a0;
+        EXPECT_FALSE(any(v1));
+        // v1 = 1;
     }
 
 #if 0
