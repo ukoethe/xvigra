@@ -27,6 +27,17 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+###########
+# options #
+###########
+
+OPTION(USE_SIMD "use SSE/AVX acceleration" OFF)
+
+set(BUILD_TESTS off CACHE STRING "build xvigra test suite")
+set_property(CACHE BUILD_TESTS PROPERTY STRINGS off gtest doctest)
+
+OPTION(BUILD_BENCHMARK "build xvigra benchmark" OFF)
+
 ################
 # dependencies #
 ################
@@ -37,7 +48,6 @@ find_package(xtl REQUIRED)
 find_package(xtensor REQUIRED)
 target_link_libraries(xvigra INTERFACE xtl xtensor)
 
-OPTION(USE_SIMD "use SSE/AVX acceleration" OFF)
 if(USE_SIMD)
     find_package(xsimd REQUIRED)
     target_link_libraries(xvigra INTERFACE xsimd)
@@ -53,12 +63,10 @@ endif()
 # testing #
 ###########
 
-set(BUILD_TESTS off CACHE STRING "build xvigra test suite")
-set_property(CACHE BUILD_TESTS PROPERTY STRINGS off gtest doctest)
-
 if(BUILD_TESTS)
     if(BUILD_TESTS STREQUAL "gtest")
         find_package(gtest REQUIRED)
+        set(TEST_FRAMEWORK gtest)
     else()
         set(DOCTEST_SOURCE_DIR "${XVIGRA_EXTERNALS_PATH}/doctest" CACHE PATH "Path to doctest")
         if(NOT EXISTS "${DOCTEST_SOURCE_DIR}")
@@ -70,9 +78,8 @@ if(BUILD_TESTS)
         add_library(doctest INTERFACE)
         target_include_directories(doctest INTERFACE "${DOCTEST_SOURCE_DIR}/doctest")
         target_compile_definitions(doctest INTERFACE XVIGRA_USE_DOCTEST)
+        set(TEST_FRAMEWORK doctest)
     endif()
-
-    find_package(xtensor-io REQUIRED)
 
     enable_testing()
     add_subdirectory(test)
@@ -81,8 +88,6 @@ endif()
 ################
 # benchmarking #
 ################
-
-OPTION(BUILD_BENCHMARK "build xvigra benchmark" OFF)
 
 if(BUILD_BENCHMARK)
     find_package(benchmark REQUIRED)
