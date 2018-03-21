@@ -251,7 +251,7 @@ namespace xvigra
                   VIGRA_REQUIRE<input_iterator_concept<IT>::value>>
         tiny_vector_impl(IT begin, IT end);
 
-        explicit tiny_vector_impl(std::initializer_list<value_type> const & v);
+        tiny_vector_impl(std::initializer_list<value_type> const & v);
 
         tiny_vector_impl(tiny_vector_impl const & v);
         tiny_vector_impl(tiny_vector_impl && v);
@@ -369,7 +369,7 @@ namespace xvigra
                   VIGRA_REQUIRE<input_iterator_concept<IT>::value>>
         tiny_vector_impl(IT begin, IT end);
 
-        explicit tiny_vector_impl(std::initializer_list<value_type> const & v);
+        tiny_vector_impl(std::initializer_list<value_type> const & v);
 
         tiny_vector_impl(tiny_vector_impl const & v);
         tiny_vector_impl(tiny_vector_impl && v);
@@ -2207,11 +2207,11 @@ namespace xvigra
     template <class V, index_t N, class R>
     inline auto
     shape_to_strides(tiny_vector<V, N, R> const & shape,
-                     tags::memory_order order = tags::c_order)
+                     tags::memory_order order = c_order)
     {
         tiny_vector<promote_type_t<V>, N> res(shape.size(), dont_init);
 
-        if(order == tags::c_order)
+        if(order == c_order)
         {
             res[shape.size()-1] = 1;
             for(index_t k=shape.size()-2; k >= 0; --k)

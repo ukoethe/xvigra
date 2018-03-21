@@ -77,20 +77,51 @@ namespace xvigra
     /* tensor_concept */
     /******************/
 
+    namespace detail
+    {
+        template <class T>
+        struct tensor_concept
+        : public std::false_type
+        {};
+
+        template <index_t N, class T>
+        struct tensor_concept<view_nd<N, T>>
+        : public std::true_type
+        {};
+
+        template <index_t N, class T, class A>
+        struct tensor_concept<array_nd<N, T, A>>
+        : public std::true_type
+        {};
+
+        template <class T, xt::layout_type L, class A, class SA>
+        struct tensor_concept<xt::xarray<T, L, A, SA>>
+        : public std::true_type
+        {};
+
+        template <class EC, xt::layout_type L, class SC, class Tag>
+        struct tensor_concept<xt::xarray_adaptor<EC, L, SC, Tag>>
+        : public std::true_type
+        {};
+
+        template <class T, std::size_t N, xt::layout_type L, class A>
+        struct tensor_concept<xt::xtensor<T, N, L, A>>
+        : public std::true_type
+        {};
+
+        template <class EC, std::size_t N, xt::layout_type L, class Tag>
+        struct tensor_concept<xt::xtensor_adaptor<EC, N, L, Tag>>
+        : public std::true_type
+        {};
+
+        template <class CT, class... S>
+        struct tensor_concept<xt::xview<CT, S...>>
+        : public std::true_type
+        {};
+    }
+
     template <class T>
-    struct tensor_concept
-    : public std::false_type
-    {};
-
-    template <index_t N, class V>
-    struct tensor_concept<view_nd<N, V>>
-    : public std::true_type
-    {};
-
-    template <index_t N, class V, class A>
-    struct tensor_concept<array_nd<N, V, A>>
-    : public std::true_type
-    {};
+    using tensor_concept = detail::tensor_concept<std::decay_t<T>>;
 
     /***********************/
     /* tiny_vector_concept */

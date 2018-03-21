@@ -88,7 +88,7 @@ namespace xvigra
 
         struct skip_initialization_tag {};
 
-        enum memory_order { c_order = 1, f_order = 2 };
+        using memory_order = xt::layout_type;
 
             // Tags to assign semantic meaning to axes.
             // (arranged in sorting order)
@@ -144,14 +144,14 @@ namespace xvigra
 
         struct byte_strides_tag
         {
-            template <int N>
-            byte_strides_proxy<N> operator=(tiny_vector<index_t, N> const & s) const
+            template <index_t N, class R>
+            byte_strides_proxy<N> operator=(tiny_vector<index_t, N, R> const & s) const
             {
                 return {s};
             }
 
-            template <int N>
-            byte_strides_proxy<N> operator()(tiny_vector<index_t, N> const & s) const
+            template <index_t N, class R>
+            byte_strides_proxy<N> operator()(tiny_vector<index_t, N, R> const & s) const
             {
                 return {s};
             }
@@ -167,6 +167,15 @@ namespace xvigra
     {
         tags::skip_initialization_tag  dont_init;
     }
+
+    constexpr tags::memory_order row_major = xt::layout_type::row_major;
+    constexpr tags::memory_order column_major = xt::layout_type::column_major;
+    constexpr tags::memory_order dynamic_layout = xt::layout_type::dynamic;
+    constexpr tags::memory_order c_order = row_major;
+    constexpr tags::memory_order f_order = column_major;
+
+    template <index_t N=runtime_size>
+    using axis_tags = tiny_vector<tags::axis_tag, N>;
 
     /*****************/
     /* multi_channel */
