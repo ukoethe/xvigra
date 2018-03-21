@@ -37,6 +37,17 @@
 #include <xtensor/xtensor_forward.hpp>
 #include <xtensor/xutils.hpp>
 
+#ifndef XVIGRA_DEFAULT_ALLOCATOR
+#  ifdef XVIGRA_USE_XSIMD
+#    include <xsimd/xsimd.hpp>
+#    define XVIGRA_DEFAULT_ALLOCATOR(T) \
+       xsimd::aligned_allocator<T, XSIMD_DEFAULT_ALIGNMENT>
+#  else
+#    define XVIGRA_DEFAULT_ALLOCATOR(T) \
+       std::allocator<T>
+#  endif
+#endif
+
 namespace xvigra
 {
     /***********/
@@ -57,7 +68,7 @@ namespace xvigra
     template <index_t N, class T>
     class view_nd;
 
-    template <index_t N, class T, class A> // FIXME: define default allocator
+    template <index_t N, class T, class A=XVIGRA_DEFAULT_ALLOCATOR(T)>
     class array_nd;
 
     /***********/
@@ -150,7 +161,6 @@ namespace xvigra
         {
             byte_strides_tag byte_strides;
         }
-
     } // namespace tags
 
     namespace

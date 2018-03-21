@@ -120,6 +120,12 @@ namespace xvigra
         template <class U, index_t M, class R>
         tiny_vector & operator=(tiny_vector<U, M, R> const & rhs);
 
+        void resize(std::size_t s)
+        {
+            vigra_precondition(s == this->size(),
+                "tiny_vector::resize(): size mismatch.");
+        }
+
         using base_type::assign;
 
         void assign(std::initializer_list<value_type> v);
@@ -2188,12 +2194,35 @@ namespace xvigra
     /*************************/
 
     template <class V, index_t N, class R, class W = V>
-    inline
-    tiny_vector<V, N>
+    inline auto
     unit_vector(tiny_vector<V, N, R> const & tmpl, index_t axis, W const & w = W(1))
     {
         tiny_vector<V, N> res(tmpl.size(), 0);
         res[axis] = w;
+        return res;
+    }
+
+        /// \brief compute the F-order or C-order (default) stride of a given shape.
+        /// Example: {200, 100, 50}  =>  {5000, 50, 1}
+    template <class V, index_t N, class R>
+    inline auto
+    shape_to_strides(tiny_vector<V, N, R> const & shape,
+                     tags::memory_order order = tags::c_order)
+    {
+        tiny_vector<promote_type_t<V>, N> res(shape.size(), dont_init);
+
+        if(order == tags::c_order)
+        {
+            res[shape.size()-1] = 1;
+            for(index_t k=shape.size()-2; k >= 0; --k)
+                res[k] = res[k+1] * shape[k+1];
+        }
+        else
+        {
+            res[0] = 1;
+            for(index_t k=1; k < shape.size(); ++k)
+                res[k] = res[k-1] * shape[k-1];
+        }
         return res;
     }
 
