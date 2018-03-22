@@ -235,7 +235,7 @@ namespace xvigra
       public:
 
             /** default constructor: create an invalid view,
-             * i.e. hasData() returns false and size() is zero.
+             * i.e. has_data() returns false and size() is zero.
              */
         view_nd()
         : shape_()
@@ -249,7 +249,7 @@ namespace xvigra
         : shape_(other.shape())
         , strides_(other.byte_strides())
         , axistags_(other.axistags())
-        , data_((char*)other.data())
+        , data_((char*)other.raw_data())
         , flags_(other.flags() & ~owns_memory_flag)
         {}
 
@@ -258,7 +258,7 @@ namespace xvigra
         : shape_(other.shape())
         , strides_(other.byte_strides())
         , axistags_(other.axistags())
-        , data_((char*)other.data())
+        , data_((char*)other.raw_data())
         , flags_(other.flags() & ~owns_memory_flag)
         {
             // static_assert(CompatibleDimensions<M, N>::value,  // FIXME
@@ -805,7 +805,7 @@ namespace xvigra
         {
             using view_t = view_nd<(N < 0) ? runtime_size : N+1, T>;
             return view_t(shape_.insert(i, 1), tags::byte_strides = strides_.insert(i, sizeof(T)),
-                          axistags_.insert(i, tag), data());
+                          axistags_.insert(i, tag), raw_data());
         }
 
             // /** create a multiband view for this array.
@@ -840,7 +840,7 @@ namespace xvigra
         {
             return view_nd<1, T>(shape_t<1>{min(shape_)},
                                  tags::byte_strides = shape_t<1>{sum(strides_)},
-                                 data());
+                                 raw_data());
         }
 
             /** create a rectangular subarray that spans between the
@@ -899,7 +899,7 @@ namespace xvigra
             return view_nd<N, T>(reversed(shape_),
                                  tags::byte_strides = reversed(strides_),
                                  reversed(axistags_),
-                                 data());
+                                 raw_data());
         }
 
             /** Permute the dimensions of the array.
@@ -932,7 +932,7 @@ namespace xvigra
             view_nd res(transposed(shape_, p),
                         tags::byte_strides = transposed(strides_, p),
                         transposed(axistags_, p),
-                        data());
+                        raw_data());
             return res;
         }
 
@@ -952,7 +952,7 @@ namespace xvigra
             return view_nd<M, T>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
                                  tags::byte_strides = shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
                                  axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
-                                 data());
+                                 raw_data());
         }
 
         template <index_t M = N>
@@ -972,18 +972,43 @@ namespace xvigra
                         shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
                         tags::byte_strides = shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
                         axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
-                        data());
+                        raw_data());
         }
 
-        pointer data()
+        pointer raw_data() noexcept
         {
             return (pointer)data_;
         }
 
-        const_pointer data() const
+        const_pointer raw_data() const noexcept
         {
             return (pointer)data_;
         }
+
+        size_type raw_data_offset() const noexcept
+        {
+            return 0;
+        }
+
+        self_type & data()
+        {
+            return *this;
+        }
+
+        self_type const & data() const
+        {
+            return *this;
+        }
+
+        // pointer data()
+        // {
+        //     return (pointer)data_;
+        // }
+
+        // const_pointer data() const
+        // {
+        //     return (pointer)data_;
+        // }
 
         const shape_type & shape() const
         {
