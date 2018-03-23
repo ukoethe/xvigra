@@ -35,13 +35,239 @@ namespace xvigra
 {
     TEST(slice, parsing)
     {
-        using namespace xt::placeholders;
+        using S = shape_t<>;
+        using R = std::runtime_error;
+        using namespace slicing;
         shape_t<3> old_shape{4,3,2}, old_strides = shape_to_strides(old_shape), point(old_shape.size());
-        shape_t<> shape, strides;
-        detail::parse_slices(point, shape, strides, old_shape, old_strides, xt::ellipsis(), 0, slice(_, _, _));
-        // detail::parse_slices(point, shape, strides, old_shape, old_strides);
-        std::cerr << point << " " << shape << " " << strides << "\n";
-    }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides);
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, old_shape);
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), all(), all());
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, old_shape);
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), all());
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, old_shape);
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(), ellipsis(), all());
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, old_shape);
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, 1);
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, old_shape.erase(0));
+            EXPECT_EQ(strides, old_strides.erase(0));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), 1);
+            EXPECT_EQ(point, (S{0,1,0}));
+            EXPECT_EQ(shape, old_shape.erase(1));
+            EXPECT_EQ(strides, old_strides.erase(1));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), 1);
+            EXPECT_EQ(point, (S{0,0,1}));
+            EXPECT_EQ(shape, old_shape.erase(2));
+            EXPECT_EQ(strides, old_strides.erase(2));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), 1, newaxis());
+            EXPECT_EQ(point, (S{0,0,1}));
+            EXPECT_EQ(shape, old_shape.erase(2).push_back(1));
+            EXPECT_EQ(strides, old_strides.erase(2).push_back(0));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), 1, newaxis());
+            EXPECT_EQ(point, (S{0,1,0}));
+            EXPECT_EQ(shape, old_shape.erase(1).insert(1, 1));
+            EXPECT_EQ(strides, old_strides.erase(1).insert(1, 0));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), -1, 1);
+            EXPECT_EQ(point, (S{0,2,1}));
+            EXPECT_EQ(shape, old_shape.erase(2).erase(1));
+            EXPECT_EQ(strides, old_strides.erase(2).erase(1));
+        }
+        // slices with positive step
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{3,3,2}));
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, 3));
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, (S{3,3,2}));
+            EXPECT_EQ(strides, old_strides);
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, _, 2));
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{2,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, _, 3));
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, _, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(0, 4, 3));
+            EXPECT_EQ(point, (S{0,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, 4, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, 3, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, 1, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{0,3,2}));
+            EXPECT_EQ(strides, old_strides); // numpy compatibility
+        }
+        // slices with negative step
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1,_,-1));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-1,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(3, 1, -1));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-1,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(3, _, -1));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{4,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-1,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, _, -2));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-2,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, _, -3));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_, 1, -3));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(3, -5, -3));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{2,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(3, 0, -3));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(3, 1, -3));
+            EXPECT_EQ(point, (S{3,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{-3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, 1, -3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{0,3,2}));
+            EXPECT_EQ(strides, old_strides); // numpy compatibility
+        }
+        // errors
+        {
+            shape_t<> shape, strides;
+            // index too big
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, 4, 2, 1), R);
+            // index too small
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, 0, 2, -3), R);
+            // too many indices
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), -1, 1, 0), R);
+            // multiple ellipses
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), 1, ellipsis()), R);
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), all(), ellipsis()), R);
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, ellipsis(), newaxis(), ellipsis()), R);
+            // zero step
+            EXPECT_THROW(detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(_,_,0)), R);
+        }
+   }
 
     TEST(slicer, c_order)
     {

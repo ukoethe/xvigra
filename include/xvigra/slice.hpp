@@ -32,6 +32,7 @@
 #define XVIGRA_SLICE_HPP
 
 #include <algorithm>
+#include <limits>
 #include <xtensor/xstrided_view.hpp>
 #include "global.hpp"
 #include "concepts.hpp"
@@ -39,6 +40,24 @@
 
 namespace xvigra
 {
+    struct slice;
+
+    namespace slicing
+    {
+        using underscore_t = xt::placeholders::xtuph;
+        using xt::placeholders::_;
+        using xt::all;
+        using xt::newaxis;
+        using xt::ellipsis;
+
+        template <class B = underscore_t, class E = underscore_t, class S = underscore_t>
+        inline auto
+        range(B b = underscore_t(), E e = underscore_t(), S s = underscore_t())
+        {
+            return slice(b, e, s);
+        }
+    }
+
     /*********/
     /* slice */
     /*********/
@@ -47,9 +66,9 @@ namespace xvigra
     {
         index_t start, stop, step;
 
-        using underscore = xt::placeholders::xtuph;
+        using underscore_t = slicing::underscore_t;
 
-        static index_t parse_step(underscore)
+        static index_t parse_step(underscore_t)
         {
             return 1;
         }
@@ -65,12 +84,12 @@ namespace xvigra
             return b;
         }
 
-        static index_t parse_start(underscore, index_t s)
+        static index_t parse_start(underscore_t, index_t s)
         {
             return s > 0 ? 0 : -1;
         }
 
-        static index_t parse_start(underscore, underscore)
+        static index_t parse_start(underscore_t, underscore_t)
         {
             return 0;
         }
@@ -81,18 +100,18 @@ namespace xvigra
             return e;
         }
 
-        static index_t parse_stop(underscore, index_t s)
+        static index_t parse_stop(underscore_t, index_t s)
         {
-            return s > 0 ? -1 : 0;
+            return s > 0 ? std::numeric_limits<index_t>::max() : std::numeric_limits<index_t>::lowest();
         }
 
-        static index_t parse_stop(underscore, underscore)
+        static index_t parse_stop(underscore_t, underscore_t)
         {
-            return -1;
+            return std::numeric_limits<index_t>::max();
         }
 
-        template <class B, class E, class S = underscore>
-        slice(B b, E e, S s = underscore())
+        template <class B = underscore_t, class E = underscore_t, class S = underscore_t>
+        slice(B b = underscore_t(), E e = underscore_t(), S s = underscore_t())
         : start(parse_start(b, s))
         , stop(parse_stop(e, s))
         , step(parse_step(s))
@@ -368,8 +387,8 @@ namespace xvigra
                                   index_t ellipsis_size,
                                   index_t i)
         {
-            point[axis] = (i < 0) ? (i + old_shape[axis]) : i;
-            vigra_precondition(i >= 0 && i < old_shape[axis],
+            point[axis] = (i >= 0) ? i : (i + old_shape[axis]);
+            vigra_precondition(point[axis] >= 0 && point[axis] < old_shape[axis],
                 "index " + std::to_string(i) + " out of bounds for axis " + std::to_string(axis) + ".");
             return axis+1;
         }
@@ -380,25 +399,26 @@ namespace xvigra
                                   index_t ellipsis_size,
                                   slice const & s)
         {
-            index_t start = max(0, min(old_shape[axis]-1,
-                                      (s.start < 0) ? s.start + old_shape[axis] : s.start));
-            index_t stop  = max(0, min(old_shape[axis]-1,
-                                      (s.stop < 0) ? s.stop + old_shape[axis] : s.stop));
+            index_t start = (s.start >= 0) ? s.start : s.start + old_shape[axis];
+            index_t stop  = (s.stop  >= 0) ? s.stop  : s.stop  + old_shape[axis];
             index_t step  = s.step;
-            index_t size = (step > 0)
-                              ? (stop - start + 1) / step
-                              : (stop - start - 1) / step;
-            point[axis] = start;
-            if(size <= 0)
+            index_t size;
+            if(step > 0)
             {
-                shape = shape.push_back(size < 0 ? 0 : 1);
-                strides = strides.push_back(0);
+                start = max(0, min(old_shape[axis], start));
+                stop  = max(0, min(old_shape[axis], stop));
+                size  = (stop - start + step - 1) / step;
             }
             else
             {
-                shape = shape.push_back(size);
-                strides = strides.push_back(old_strides[axis]*step);
+                start = max(-1, min(old_shape[axis]-1, start));
+                stop  = max(-1, min(old_shape[axis]-1, stop));
+                size  = (stop - start + step + 1) / step;
             }
+
+            point[axis] = start;
+            shape = shape.push_back((size <= 0) ? 0 : size);
+            strides = strides.push_back((size <= 0) ? old_strides[axis] : old_strides[axis]*step);
             return axis+1;
         }
 
