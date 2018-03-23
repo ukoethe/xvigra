@@ -29,10 +29,20 @@
 /************************************************************************/
 
 #include "unittest.hpp"
-#include <xvigra/slicer.hpp>
+#include <xvigra/slice.hpp>
 
 namespace xvigra
 {
+    TEST(slice, parsing)
+    {
+        using namespace xt::placeholders;
+        shape_t<3> old_shape{4,3,2}, old_strides = shape_to_strides(old_shape), point(old_shape.size());
+        shape_t<> shape, strides;
+        detail::parse_slices(point, shape, strides, old_shape, old_strides, xt::ellipsis(), 0, slice(_, _, _));
+        // detail::parse_slices(point, shape, strides, old_shape, old_strides);
+        std::cerr << point << " " << shape << " " << strides << "\n";
+    }
+
     TEST(slicer, c_order)
     {
         xt::dynamic_shape<std::size_t> shape{2,3,4};
@@ -99,7 +109,7 @@ namespace xvigra
     TEST(slicer, f_order)
     {
         xt::dynamic_shape<std::size_t> shape{2,3,4};
-        slicer nav1(shape, tags::f_order), nav2(shape, tags::f_order);
+        slicer nav1(shape, f_order), nav2(shape, f_order);
 
         nav1.set_free_axes(0);
         nav2.set_iterate_axes(1, 2);
