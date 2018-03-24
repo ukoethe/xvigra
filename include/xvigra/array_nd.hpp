@@ -45,6 +45,7 @@
 #include "error.hpp"
 #include "math.hpp"
 #include "tiny_vector.hpp"
+#include "slice.hpp"
 
 // Bounds checking Macro used if VIGRA_CHECK_BOUNDS is defined.
 #ifdef XVIGRA_CHECK_BOUNDS
@@ -86,6 +87,85 @@ namespace xt
 
 namespace xvigra
 {
+    namespace tags
+    {
+            // Tags to assign semantic meaning to axes.
+            // (arranged in sorting order)
+        enum axis_tag  { axis_missing = -1,
+                         axis_unknown = 0,
+                         axis_c,  // channel axis
+                         axis_n,  // node map for a graph
+                         axis_x,  // spatial x-axis
+                         axis_y,  // spatial y-axis
+                         axis_z,  // spatial z-axis
+                         axis_t,  // time axis
+                         axis_fx, // Fourier transform of x-axis
+                         axis_fy, // Fourier transform of y-axis
+                         axis_fz, // Fourier transform of z-axis
+                         axis_ft, // Fourier transform of t-axis
+                         axis_e,  // edge map for a graph
+                         axis_end // marker for the end of the list
+                       };
+
+
+        //     // Support for tags::axis keyword argument to select
+        //     // the axis an algorithm is supposed to operator on
+        // struct axis_selection_proxy
+        // {
+        //     int value;
+        // };
+
+        // struct axis_selection_tag
+        // {
+        //     axis_selection_proxy operator=(int i) const
+        //     {
+        //         return {i};
+        //     }
+
+        //     axis_selection_proxy operator()(int i) const
+        //     {
+        //         return {i};
+        //     }
+        // };
+
+        // namespace
+        // {
+        //     axis_selection_tag axis;
+        // }
+
+            // Support for tags::byte_strides keyword argument
+            // to pass strides in units of bytes rather than `sizeof(T)`.
+        template <int N>
+        struct byte_strides_proxy
+        {
+            tiny_vector<index_t, N> value;
+        };
+
+        struct byte_strides_tag
+        {
+            template <index_t N, class R>
+            byte_strides_proxy<N> operator=(tiny_vector<index_t, N, R> const & s) const
+            {
+                return {s};
+            }
+
+            template <index_t N, class R>
+            byte_strides_proxy<N> operator()(tiny_vector<index_t, N, R> const & s) const
+            {
+                return {s};
+            }
+        };
+
+        namespace
+        {
+            byte_strides_tag byte_strides;
+        }
+
+    } // namespace tags
+
+    template <index_t N=runtime_size>
+    using axis_tags = tiny_vector<tags::axis_tag, N>;
+
     inline auto
     default_axistags(index_t N, bool with_channels = false, tags::memory_order order = c_order)
     {
@@ -207,7 +287,7 @@ namespace xvigra
             if(this != &rhs)
             {
                 shape_.swap(rhs.shape_);
-                strides_.swap(rhs.strides_);
+                byte_strides_.swap(rhs.byte_strides_);
                 axistags_.swap(rhs.axistags_);
                 std::swap(data_, rhs.data_);
                 std::swap(flags_, rhs.flags_);
@@ -217,17 +297,17 @@ namespace xvigra
             // ensure that singleton axes have zero stride
         void zero_singleton_strides()
         {
-            for (index_t k = 0; k < dimension(); ++k)
+            for (decltype(dimension()) k = 0; k < dimension(); ++k)
             {
                 if (shape_[k] == 1)
                 {
-                    strides_[k] = 0;
+                    byte_strides_[k] = 0;
                 }
             }
         }
 
         shape_type shape_;
-        shape_type strides_;
+        shape_type byte_strides_;
         axistags_type axistags_;
         char * data_;
         unsigned flags_;
@@ -239,7 +319,7 @@ namespace xvigra
              */
         view_nd()
         : shape_()
-        , strides_()
+        , byte_strides_()
         , axistags_()
         , data_(0)
         , flags_(0)
@@ -247,7 +327,7 @@ namespace xvigra
 
         view_nd(view_nd const & other)
         : shape_(other.shape())
-        , strides_(other.byte_strides())
+        , byte_strides_(other.byte_strides())
         , axistags_(other.axistags())
         , data_((char*)other.raw_data())
         , flags_(other.flags() & ~owns_memory_flag)
@@ -256,7 +336,7 @@ namespace xvigra
         template <index_t M>
         view_nd(view_nd<M, T> const & other)
         : shape_(other.shape())
-        , strides_(other.byte_strides())
+        , byte_strides_(other.byte_strides())
         , axistags_(other.axistags())
         , data_((char*)other.raw_data())
         , flags_(other.flags() & ~owns_memory_flag)
@@ -318,7 +398,7 @@ namespace xvigra
                 axistags_type   const & axistags,
                 const_pointer ptr)
         : shape_(shape)
-        , strides_(strides*sizeof(T))
+        , byte_strides_(strides*sizeof(T))
         , axistags_(axistags)
         , data_((char*)ptr)
         , flags_(is_consecutive_impl())
@@ -336,7 +416,7 @@ namespace xvigra
                 axistags_type const & axistags,
                 const_pointer ptr)
         : shape_(shape)
-        , strides_(strides.value)
+        , byte_strides_(strides.value)
         , axistags_(axistags)
         , data_((char*)ptr)
         , flags_(is_consecutive_impl())
@@ -361,7 +441,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
-            return *(pointer)(data_ + std::inner_product(first, last, strides_.begin(), 0l));
+            return *(pointer)(data_ + std::inner_product(first, last, byte_strides_.begin(), 0l));
         }
 
             // needed for operator==
@@ -370,7 +450,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
-            return *(const_pointer)(data_ + std::inner_product(first, last, strides_.begin(), 0l));
+            return *(const_pointer)(data_ + std::inner_product(first, last, byte_strides_.begin(), 0l));
         }
 
             // needed for operator==
@@ -442,20 +522,14 @@ namespace xvigra
         reference operator[](shape_type const & d)
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(pointer)(data_ + dot(d, strides_));
+            return *(pointer)(data_ + dot(d, byte_strides_));
         }
 
-            /** Access element via scalar index. Only allowed if
-                <tt>is_consecutive() == true</tt> or <tt>dimension() <= 1</tt>.
+            /** Access element via scalar index w.r.t. raw memory.
              */
         reference operator[](size_type i)
         {
-            if(is_consecutive())
-                return *(pointer)(data_ + i*sizeof(T));
-            if(dimension() <= 1)
-                return *(pointer)(data_ + i*strides_[0]);
-            vigra_precondition(false,
-                "view_nd::operator[](int) forbidden for strided multi-dimensional arrays.");
+            return *((pointer)data_ + i);
         }
 
             /** Get element.
@@ -463,20 +537,14 @@ namespace xvigra
         const_reference operator[](shape_type const & d) const
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(const_pointer)(data_ + dot(d, strides_));
+            return *(const_pointer)(data_ + dot(d, byte_strides_));
         }
 
-            /** Get element via scalar index. Only allowed if
-                <tt>is_consecutive() == true</tt> or <tt>dimension() <= 1</tt>.
+            /** Get element via scalar index w.r.t. raw memory.
              */
         const_reference operator[](size_type i) const
         {
-            if(is_consecutive())
-                return *(const_pointer)(data_ + i*sizeof(T));
-            if(dimension() <= 1)
-                return *(const_pointer)(data_ + i*strides_[0]);
-            vigra_precondition(false,
-                "view_nd::operator[](int) forbidden for strided multi-dimensional arrays.");
+            return *((const_pointer)data_ + i);
         }
 
             /** Access the array's first element.
@@ -492,7 +560,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(pointer)(data_ + i*strides_[dimension()-1]);
+            return *(pointer)(data_ + i*byte_strides_[dimension()-1]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -504,7 +572,7 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
+            return *(pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, byte_strides_));
         }
 
             /** Access the array's first element.
@@ -520,7 +588,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(const_pointer)(data_ + i*strides_[dimension()-1]);
+            return *(const_pointer)(data_ + i*byte_strides_[dimension()-1]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -532,7 +600,7 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(const_pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
+            return *(const_pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, byte_strides_));
         }
 
             /** Bind 'axis' to 'index'.
@@ -566,7 +634,7 @@ namespace xvigra
             else
             {
                 return view_t(shape_.erase(axis),
-                              tags::byte_strides = strides_.erase(axis),
+                              tags::byte_strides = byte_strides_.erase(axis),
                               axistags_.erase(axis),
                               &operator[](point));
             }
@@ -709,12 +777,12 @@ namespace xvigra
             using value_t = typename T::value_type;
             using view_t  = view_nd<(N == runtime_size ? runtime_size : N + 1), value_t>;
 
-            vigra_precondition(0 <= d && d <= dimension(),
+            vigra_precondition(0 <= d && d <= (index_t)dimension(),
                 "view_nd::expand_elements(d): 0 <= 'd' <= dimension() required.");
 
             constexpr index_t s = T::static_size;
             return view_t(shape_.insert(d, s),
-                          tags::byte_strides = strides_.insert(d, sizeof(value_t)),
+                          tags::byte_strides = byte_strides_.insert(d, sizeof(value_t)),
                           axistags_.insert(d, tags::axis_c),
                           reinterpret_cast<value_t*>(data_));
         }
@@ -764,7 +832,7 @@ namespace xvigra
                 return *this;
             if(c < 0)
                 return newaxis(d, tags::axis_c);
-            vigra_precondition(d < dimension(),
+            vigra_precondition(d < (index_t)dimension(),
                 "view_nd::ensure_channel_axis(d): d < dimension() required.");
             auto permutation = shape_t<>::range(dimension()).erase(c).insert(d, c);
             return transpose(permutation);
@@ -804,7 +872,7 @@ namespace xvigra
                 tags::axis_tag tag = tags::axis_unknown) const
         {
             using view_t = view_nd<(N < 0) ? runtime_size : N+1, T>;
-            return view_t(shape_.insert(i, 1), tags::byte_strides = strides_.insert(i, sizeof(T)),
+            return view_t(shape_.insert(i, 1), tags::byte_strides = byte_strides_.insert(i, sizeof(T)),
                           axistags_.insert(i, tag), raw_data());
         }
 
@@ -839,7 +907,7 @@ namespace xvigra
         view_nd<1, T> diagonal() const
         {
             return view_nd<1, T>(shape_t<1>{min(shape_)},
-                                 tags::byte_strides = shape_t<1>{sum(strides_)},
+                                 tags::byte_strides = shape_t<1>{sum(byte_strides_)},
                                  raw_data());
         }
 
@@ -865,7 +933,7 @@ namespace xvigra
         {
             vigra_precondition(p.size() == dimension() && q.size() == dimension(),
                 "view_nd::subarray(): size mismatch.");
-            for(int k=0; k<dimension(); ++k)
+            for(decltype(dimension()) k=0; k<dimension(); ++k)
             {
                 if(p[k] < 0)
                     p[k] += shape_[k];
@@ -874,8 +942,8 @@ namespace xvigra
             }
             vigra_precondition(is_inside(p) && all_less_equal(p, q) && all_less_equal(q, shape_),
                 "view_nd::subarray(): invalid subarray limits.");
-            const index_t offset = dot(strides_, p);
-            return view_nd(q - p, tags::byte_strides = strides_, axistags_, (const_pointer)(data_ + offset));
+            const index_t offset = dot(byte_strides_, p);
+            return view_nd(q - p, tags::byte_strides = byte_strides_, axistags_, (const_pointer)(data_ + offset));
         }
 
             /** Transpose an array. If N==2, this implements the usual matrix transposition.
@@ -897,7 +965,7 @@ namespace xvigra
         transpose() const
         {
             return view_nd<N, T>(reversed(shape_),
-                                 tags::byte_strides = reversed(strides_),
+                                 tags::byte_strides = reversed(byte_strides_),
                                  reversed(axistags_),
                                  raw_data());
         }
@@ -930,7 +998,7 @@ namespace xvigra
                 "view_nd::transpose(): permutation.size() doesn't match dimension().");
             shape_type p(permutation);
             view_nd res(transposed(shape_, p),
-                        tags::byte_strides = transposed(strides_, p),
+                        tags::byte_strides = transposed(byte_strides_, p),
                         transposed(axistags_, p),
                         raw_data());
             return res;
@@ -939,7 +1007,20 @@ namespace xvigra
         view_nd
         transpose(tags::memory_order order) const
         {
-            return transpose(detail::permutation_to_order(strides_, order));
+            return transpose(detail::permutation_to_order(byte_strides_, order));
+        }
+
+        template <class S, class ... A>
+        auto view(S s, A ... a)
+        {
+            constexpr index_t M = detail::slice_dimension_traits<N, N, S, A...>::value;
+            shape_type point(N, 0);
+            shape_t<> new_shape, new_strides;
+            detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s, a...);
+            const index_t offset = dot(strides(), point);
+            using new_axistags_type = typename view_nd<M, T>::axistags_type;
+            return view_nd<M, T>(new_shape, new_strides,
+                                 new_axistags_type(), (const_pointer)(data_ + offset));
         }
 
         template <index_t M = N>
@@ -947,10 +1028,10 @@ namespace xvigra
         {
             static_assert(M == runtime_size || N == runtime_size || M == N,
                 "view_nd::view(): desired dimension is incompatible with dimension().");
-            vigra_precondition(M == runtime_size || M == dimension(),
+            vigra_precondition(M == runtime_size || M == (index_t)dimension(),
                 "view_nd::view(): desired dimension is incompatible with dimension().");
             return view_nd<M, T>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
-                                 tags::byte_strides = shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
+                                 tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
                                  axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
                                  raw_data());
         }
@@ -970,10 +1051,20 @@ namespace xvigra
                 "view_nd::cview(): desired dimension is incompatible with dimension().");
             return view_nd<M, const_value_type>(
                         shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
-                        tags::byte_strides = shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
+                        tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
                         axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
                         raw_data());
         }
+
+        // pointer data()
+        // {
+        //     return (pointer)data_;
+        // }
+
+        // const_pointer data() const
+        // {
+        //     return (pointer)data_;
+        // }
 
         pointer raw_data() noexcept
         {
@@ -1000,16 +1091,6 @@ namespace xvigra
             return *this;
         }
 
-        // pointer data()
-        // {
-        //     return (pointer)data_;
-        // }
-
-        // const_pointer data() const
-        // {
-        //     return (pointer)data_;
-        // }
-
         const shape_type & shape() const
         {
             return shape_;
@@ -1017,12 +1098,12 @@ namespace xvigra
 
         shape_type const & byte_strides() const
         {
-            return strides_;
+            return byte_strides_;
         }
 
         shape_type strides() const
         {
-            return strides_ / sizeof(value_type);
+            return byte_strides_ / sizeof(value_type);
         }
 
             /** number of the elements in the array.
@@ -1130,7 +1211,7 @@ namespace xvigra
 
         int channel_axis() const
         {
-            for(int k=0; k<dimension(); ++k)
+            for(decltype(dimension()) k=0; k<dimension(); ++k)
                 if(axistags_[k] == tags::axis_c)
                     return k;
             return tags::axis_missing;
@@ -1138,7 +1219,7 @@ namespace xvigra
 
         int axis_index(tags::axis_tag tag) const
         {
-            for(int k=0; k<dimension(); ++k)
+            for(decltype(dimension()) k=0; k<dimension(); ++k)
                 if(axistags_[k] == tag)
                     return k;
             return tags::axis_missing;

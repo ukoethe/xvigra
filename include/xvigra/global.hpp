@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <vector>
 #include <array>
+#include <tuple>  // std::ignore
 #include <xtensor/xtensor_forward.hpp>
 #include <xtensor/xutils.hpp>
 
@@ -90,83 +91,7 @@ namespace xvigra
 
         using memory_order = xt::layout_type;
 
-            // Tags to assign semantic meaning to axes.
-            // (arranged in sorting order)
-        enum axis_tag  { axis_missing = -1,
-                         axis_unknown = 0,
-                         axis_c,  // channel axis
-                         axis_n,  // node map for a graph
-                         axis_x,  // spatial x-axis
-                         axis_y,  // spatial y-axis
-                         axis_z,  // spatial z-axis
-                         axis_t,  // time axis
-                         axis_fx, // Fourier transform of x-axis
-                         axis_fy, // Fourier transform of y-axis
-                         axis_fz, // Fourier transform of z-axis
-                         axis_ft, // Fourier transform of t-axis
-                         axis_e,  // edge map for a graph
-                         axis_end // marker for the end of the list
-                       };
-
-
-            // Support for tags::axis keyword argument to select
-            // the axis an algorithm is supposed to operator on
-        struct axis_selection_proxy
-        {
-            int value;
-        };
-
-        struct axis_selection_tag
-        {
-            axis_selection_proxy operator=(int i) const
-            {
-                return {i};
-            }
-
-            axis_selection_proxy operator()(int i) const
-            {
-                return {i};
-            }
-        };
-
-        namespace
-        {
-            axis_selection_tag axis;
-        }
-
-            // Support for tags::byte_strides keyword argument
-            // to pass strides in units of bytes rather than `sizeof(T)`.
-        template <int N>
-        struct byte_strides_proxy
-        {
-            tiny_vector<index_t, N> value;
-        };
-
-        struct byte_strides_tag
-        {
-            template <index_t N, class R>
-            byte_strides_proxy<N> operator=(tiny_vector<index_t, N, R> const & s) const
-            {
-                return {s};
-            }
-
-            template <index_t N, class R>
-            byte_strides_proxy<N> operator()(tiny_vector<index_t, N, R> const & s) const
-            {
-                return {s};
-            }
-        };
-
-        namespace
-        {
-            byte_strides_tag byte_strides;
-        }
     } // namespace tags
-
-    namespace
-    {
-        tags::skip_initialization_tag  dont_init;
-    }
 
     constexpr tags::memory_order row_major = xt::layout_type::row_major;
     constexpr tags::memory_order column_major = xt::layout_type::column_major;
@@ -174,8 +99,10 @@ namespace xvigra
     constexpr tags::memory_order c_order = row_major;
     constexpr tags::memory_order f_order = column_major;
 
-    template <index_t N=runtime_size>
-    using axis_tags = tiny_vector<tags::axis_tag, N>;
+    namespace
+    {
+        tags::skip_initialization_tag  dont_init;
+    }
 
     /*****************/
     /* multi_channel */
