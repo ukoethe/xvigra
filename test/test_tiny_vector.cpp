@@ -40,7 +40,7 @@
 
 namespace xvigra
 {
-    static const unsigned SIZE = 3;
+    static const index_t SIZE = 3;
 
     using BV = tiny_vector<uint8_t, SIZE>;
     using IV = tiny_vector<int, SIZE>;

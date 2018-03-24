@@ -32,7 +32,6 @@
 #define XVIGRA_TINY_VECTOR_HPP
 
 #include <algorithm>
-#include <tuple>  // std::ignore
 #include <xtensor/xbuffer_adaptor.hpp>
 
 #include "global.hpp"
@@ -808,7 +807,7 @@ namespace xvigra
     inline bool
     all(tiny_vector<V, N, R> const & t)
     {
-        for(index_t i=0; i<t.size(); ++i)
+        for(decltype(t.size()) i=0; i<t.size(); ++i)
             if(t[i] == V())
                 return false;
         return true;
@@ -819,7 +818,7 @@ namespace xvigra
     inline bool
     any(tiny_vector<V, N, R> const & t)
     {
-        for(index_t i=0; i<t.size(); ++i)
+        for(decltype(t.size()) i=0; i<t.size(); ++i)
             if(t[i] != V())
                 return true;
         return false;
@@ -837,7 +836,7 @@ namespace xvigra
     {                                                                          \
         XVIGRA_ASSERT_MSG(l.size() == r.size(),                                \
             "tiny_vector::all_" #NAME "(): size mismatch.");                   \
-        for(index_t k=0; k < l.size(); ++k)                                    \
+        for(decltype(l.size()) k=0; k < l.size(); ++k)                         \
             if (l[k] OP r[k])                                                  \
                 return false;                                                  \
         return true;                                                           \
@@ -850,7 +849,7 @@ namespace xvigra
     all_##NAME(tiny_vector<V1, N1, R1> const & l,                              \
                V2 const & r)                                                   \
     {                                                                          \
-        for(index_t k=0; k < l.size(); ++k)                                    \
+        for(decltype(l.size()) k=0; k < l.size(); ++k)                         \
             if (l[k] OP r)                                                     \
                 return false;                                                  \
         return true;                                                           \
@@ -863,7 +862,7 @@ namespace xvigra
     all_##NAME(V1 const & l,                                                   \
                tiny_vector<V2, N2, R2> const & r)                              \
     {                                                                          \
-        for(index_t k=0; k < r.size(); ++k)                                    \
+        for(decltype(r.size()) k=0; k < r.size(); ++k)                         \
             if (l OP r[k])                                                     \
                 return false;                                                  \
         return true;                                                           \
@@ -886,7 +885,7 @@ namespace xvigra
     {
         if(l.size() != r.size())
             return false;
-         for(index_t k=0; k < l.size(); ++k)
+         for(decltype(l.size()) k=0; k < l.size(); ++k)
             if(!is_close(l[k], r[k], rtol, atol, equal_nan))
                 return false;
         return true;
@@ -900,7 +899,7 @@ namespace xvigra
               double atol = 2.0*std::numeric_limits<double>::epsilon(),
               bool equal_nan = false)
     {
-         for(index_t k=0; k < l.size(); ++k)
+         for(decltype(l.size()) k=0; k < l.size(); ++k)
             if(!is_close(l[k], r, rtol, atol, equal_nan))
                 return false;
         return true;
@@ -914,7 +913,7 @@ namespace xvigra
               double atol = 2.0*std::numeric_limits<double>::epsilon(),
               bool equal_nan = false)
     {
-         for(index_t k=0; k < r.size(); ++k)
+         for(decltype(r.size()) k=0; k < r.size(); ++k)
             if(!is_close(l, r[k], rtol, atol, equal_nan))
                 return false;
         return true;
@@ -941,7 +940,7 @@ namespace xvigra
     template <class V, index_t N, class R>
     inline
     tiny_vector<V, N, R>::tiny_vector(tiny_vector && v)
-    : base_type(std::forward<base_type>(v))
+    : base_type(std::forward<tiny_vector>(v))
     {
     }
 
@@ -1305,7 +1304,7 @@ namespace xvigra
                         ? end - static_cast<value_type>(static_size)
                         : value_type();
         tiny_vector<value_type, N> res(end-start, dont_init);
-        for(index_t k=0; k < res.size(); ++k, ++start)
+        for(decltype(res.size()) k=0; k < res.size(); ++k, ++start)
             res[k] = start;
         return res;
     }
@@ -2220,7 +2219,7 @@ namespace xvigra
         else
         {
             res[0] = 1;
-            for(index_t k=1; k < shape.size(); ++k)
+            for(decltype(shape.size()) k=1; k < shape.size(); ++k)
                 res[k] = res[k-1] * shape[k-1];
         }
         return res;
@@ -2237,7 +2236,7 @@ namespace xvigra
     reversed(tiny_vector<V, N, R> const & v)
     {
         tiny_vector<V, N> res(v.size(), dont_init);
-        for(index_t k=0; k<v.size(); ++k)
+        for(decltype(v.size()) k=0; k<v.size(); ++k)
             res[k] = v[v.size()-1-k];
         return res;
     }
@@ -2255,9 +2254,9 @@ namespace xvigra
         vigra_precondition(v.size() == permutation.size(),
             "transposed(tiny_array, permutation): size mismatch.");
         tiny_vector<V1, N1> res(v.size(), dont_init);
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
         {
-            XVIGRA_ASSERT_MSG(permutation[k] >= 0 && permutation[k] < v.size(),
+            XVIGRA_ASSERT_MSG(permutation[k] >= 0 && permutation[k] < (V2)v.size(),
                 "transposed(tiny_array, permutation):  permutation index out of bounds.");
             res[k] = v[permutation[k]];
         }
@@ -2315,7 +2314,7 @@ namespace xvigra
     operator OP##=(tiny_vector<V1, N1, R1> & l,                                              \
                    V2 r)                                                                     \
     {                                                                                        \
-        for(index_t i=0; i<l.size(); ++i)                                                    \
+        for(decltype(l.size()) i=0; i<l.size(); ++i)                                         \
             l[i] OP##= r;                                                                    \
         return l;                                                                            \
     }                                                                                        \
@@ -2327,7 +2326,7 @@ namespace xvigra
     {                                                                                        \
         XVIGRA_ASSERT_MSG(l.size() == r.size(),                                              \
             "tiny_vector::operator" #OP "=(): size mismatch.");                              \
-        for(index_t i=0; i<l.size(); ++i)                                                    \
+        for(decltype(l.size()) i=0; i<l.size(); ++i)                                         \
             l[i] OP##= r[i];                                                                 \
         return l;                                                                            \
     }                                                                                        \
@@ -2344,7 +2343,7 @@ namespace xvigra
             "tiny_vector::operator" #OP "(): size mismatch.");                               \
         tiny_vector<decltype((*(V1*)0) OP (*(V2*)0)),                                        \
                    tiny_detail::size_promote<N1, N2>::value> res(l.size(), dont_init);       \
-        for(index_t i=0; i<l.size(); ++i)                                                    \
+        for(decltype(l.size()) i=0; i<l.size(); ++i)                                         \
             res[i] = l[i] OP r[i];                                                           \
         return res;                                                                          \
     }                                                                                        \
@@ -2358,7 +2357,7 @@ namespace xvigra
                 V2 r)                                                                        \
     {                                                                                        \
         tiny_vector<decltype((*(V1*)0) OP (*(V2*)0)), N1> res(l.size(), dont_init);          \
-        for(index_t i=0; i<l.size(); ++i)                                                    \
+        for(decltype(l.size()) i=0; i<l.size(); ++i)                                         \
             res[i] = l[i] OP r;                                                              \
         return res;                                                                          \
     }                                                                                        \
@@ -2372,7 +2371,7 @@ namespace xvigra
                 tiny_vector<V2, N2, R2> const & r)                                           \
     {                                                                                        \
         tiny_vector<decltype((*(V1*)0) OP (*(V2*)0)), N2> res(r.size(), dont_init);          \
-        for(index_t i=0; i<r.size(); ++i)                                                    \
+        for(decltype(r.size()) i=0; i<r.size(); ++i)                                         \
             res[i] = l OP r[i];                                                              \
         return res;                                                                          \
     }
@@ -2406,7 +2405,7 @@ namespace xvigra
     operator-(tiny_vector<V, N, R> const & v)
     {
         tiny_vector<decltype(-(*(V*)0)), N> res(v.size(), dont_init);
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
             res[k] = -v[k];
         return res;
     }
@@ -2418,7 +2417,7 @@ namespace xvigra
     operator!(tiny_vector<V, N, R> const & v)
     {
         tiny_vector<decltype(!(*(V*)0)), N> res(v.size(), dont_init);
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
             res[k] = !v[k];
         return res;
     }
@@ -2430,7 +2429,7 @@ namespace xvigra
     operator~(tiny_vector<V, N, R> const & v)
     {
         tiny_vector<decltype(~(*(V*)0)), N> res(v.size(), dont_init);
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
             res[k] = ~v[k];
         return res;
     }
@@ -2442,7 +2441,7 @@ namespace xvigra
     {                                                                       \
         using math::FCT;                                                    \
         tiny_vector<decltype(FCT(v[0])), N> res(v.size(), dont_init);       \
-        for(index_t k=0; k < v.size(); ++k)                                 \
+        for(decltype(v.size()) k=0; k < v.size(); ++k)                      \
             res[k] = FCT(v[k]);                                             \
         return res;                                                         \
     }
@@ -2518,7 +2517,7 @@ namespace xvigra
             #FCT "(tiny_vector, tiny_vector): size mismatch.");                                 \
         tiny_vector<decltype(FCT(l[0], r[0])),                                                  \
                    tiny_detail::size_promote<N1, N2>::value> res(l.size(), dont_init);          \
-        for(index_t k=0; k < l.size(); ++k)                                                     \
+        for(decltype(l.size()) k=0; k < l.size(); ++k)                                          \
             res[k] = FCT(l[k], r[k]);                                                           \
         return res;                                                                             \
     }
@@ -2542,7 +2541,7 @@ namespace xvigra
         using math::pow;
         auto e = static_cast<promote_type_t<V, E>>(exponent);
         tiny_vector<decltype(pow(v[0], e)), N> res(v.size(), dont_init);
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
             res[k] = pow(v[k], e);
         return res;
     }
@@ -2554,7 +2553,7 @@ namespace xvigra
     {
         using result_type = decltype(v[0] + v[0]);
         result_type res = result_type();
-        for(index_t k=0; k < v.size(); ++k)
+        for(decltype(v.size()) k=0; k < v.size(); ++k)
             res += v[k];
         return res;
     }
@@ -2579,7 +2578,7 @@ namespace xvigra
     {
         using promote_type = decltype(v[0] + v[0]);
         tiny_vector<promote_type, N> res(v);
-        for(index_t k=1; k < v.size(); ++k)
+        for(decltype(v.size()) k=1; k < v.size(); ++k)
             res[k] += res[k-1];
         return res;
     }
@@ -2593,7 +2592,7 @@ namespace xvigra
         if(v.size() == 0)
             return result_type();
         result_type res = v[0];
-        for(index_t k=1; k < v.size(); ++k)
+        for(decltype(v.size()) k=1; k < v.size(); ++k)
             res *= v[k];
         return res;
     }
@@ -2605,7 +2604,7 @@ namespace xvigra
     {
         using promote_type = decltype(v[0] * v[0]);
         tiny_vector<promote_type, N> res(v);
-        for(index_t k=1; k < v.size(); ++k)
+        for(decltype(v.size()) k=1; k < v.size(); ++k)
             res[k] *= res[k-1];
         return res;
     }
@@ -2623,7 +2622,7 @@ namespace xvigra
         XVIGRA_ASSERT_MSG(l.size() == r.size(),
             "min(tiny_vector, tiny_vector): size mismatch.");
         tiny_vector<promote_type, tiny_detail::size_promote<N1, N2>::value> res(l.size(), dont_init);
-        for(index_t k=0; k < l.size(); ++k)
+        for(decltype(l.size()) k=0; k < l.size(); ++k)
             res[k] = min(static_cast<promote_type>(l[k]), static_cast<promote_type>(r[k]));
         return res;
     }
@@ -2638,7 +2637,7 @@ namespace xvigra
         using std::min;
         using promote_type = promote_type_t<V1, V2>;
         tiny_vector<promote_type, N1> res(l.size(), dont_init);
-        for(index_t k=0; k < l.size(); ++k)
+        for(decltype(l.size()) k=0; k < l.size(); ++k)
             res[k] =  min(static_cast<promote_type>(l[k]), static_cast<promote_type>(r));
         return res;
     }
@@ -2673,7 +2672,7 @@ namespace xvigra
         if(l.size() == 0)
             return -1;
         index_t m = 0;
-        for(index_t i=1; i<l.size(); ++i)
+        for(decltype(l.size()) i=1; i<l.size(); ++i)
             if(l[i] < l[m])
                 m = i;
         return m;
@@ -2692,7 +2691,7 @@ namespace xvigra
         XVIGRA_ASSERT_MSG(l.size() == r.size(),
             "max(tiny_vector, tiny_vector): size mismatch.");
         tiny_vector<promote_type, tiny_detail::size_promote<N1, N2>::value> res(l.size(), dont_init);
-        for(index_t k=0; k < l.size(); ++k)
+        for(decltype(l.size()) k=0; k < l.size(); ++k)
             res[k] = max(static_cast<promote_type>(l[k]), static_cast<promote_type>(r[k]));
         return res;
     }
@@ -2707,7 +2706,7 @@ namespace xvigra
         using std::max;
         using promote_type = promote_type_t<V1, V2>;
         tiny_vector<promote_type, N1> res(l.size(), dont_init);
-        for(index_t k=0; k < l.size(); ++k)
+        for(decltype(l.size()) k=0; k < l.size(); ++k)
             res[k] =  max(static_cast<promote_type>(l[k]), static_cast<promote_type>(r));
         return res;
     }
@@ -2742,7 +2741,7 @@ namespace xvigra
         if(l.size() == 0)
             return -1;
         index_t m = 0;
-        for(index_t i=1; i<l.size(); ++i)
+        for(decltype(l.size()) i=1; i<l.size(); ++i)
             if(l[i] > l[m])
                 m = i;
         return m;
@@ -2757,7 +2756,7 @@ namespace xvigra
     clip_lower(tiny_vector<V, N, R> const & t, const V val)
     {
         tiny_vector<V, N> res(t.size(), dont_init);
-        for(index_t k=0; k < t.size(); ++k)
+        for(decltype(t.size()) k=0; k < t.size(); ++k)
         {
             res[k] = t[k] < val ? val :  t[k];
         }
@@ -2773,7 +2772,7 @@ namespace xvigra
     clip_upper(tiny_vector<V, N, R> const & t, const V val)
     {
         tiny_vector<V, N> res(t.size(), dont_init);
-        for(index_t k=0; k < t.size(); ++k)
+        for(decltype(t.size()) k=0; k < t.size(); ++k)
         {
             res[k] = t[k] > val ? val :  t[k];
         }
@@ -2791,7 +2790,7 @@ namespace xvigra
          const V valLower, const V valUpper)
     {
         tiny_vector<V, N> res(t.size(), dont_init);
-        for(index_t k=0; k < t.size(); ++k)
+        for(decltype(t.size()) k=0; k < t.size(); ++k)
         {
             res[k] =  (t[k] < valLower)
                            ? valLower
@@ -2816,7 +2815,7 @@ namespace xvigra
         XVIGRA_ASSERT_MSG(t.size() == valLower.size() && t.size() == valUpper.size(),
             "clip(): size mismatch.");
         tiny_vector<V, N1> res(t.size(), dont_init);
-        for(index_t k=0; k < t.size(); ++k)
+        for(decltype(t.size()) k=0; k < t.size(); ++k)
         {
             res[k] =  (t[k] < valLower[k])
                            ? valLower[k]
@@ -2837,7 +2836,7 @@ namespace xvigra
             "dot(tiny_vector, tiny_vector): size mismatch.");
         using result_type = decltype(l[0] * r[0]);
         result_type res = result_type();
-        for(index_t k=0; k < l.size(); ++k)
+        for(decltype(l.size()) k=0; k < l.size(); ++k)
             res += l[k] * r[k];
         return res;
     }
@@ -2856,49 +2855,29 @@ namespace xvigra
                             r1[0]*r2[1] - r1[1]*r2[0]};
     }
 
-    // /// squared norm
-    // template <class V, index_t N, class R>
-    // inline auto
-    // norm_sq(tiny_vector<V, N, R> const & t)
-    // {
-    //     using result_type = squared_norm_type_t<tiny_vector<V, N, R>>;
-    //     result_type result = result_type();
-    //     for(index_t i=0; i<t.size(); ++i)
-    //         result += norm_sq(t[i]);
-    //     return result;
-    // }
-
-    // using xt::norm_lp;
-    // using xt::norm_lp_to_p;
-    // using xt::norm_l0;
-    // using xt::norm_l1;
-    // using xt::norm_l2;
-    // using xt::norm_linf;
-    // using xt::norm_sq;
-
     #define XVIGRA_EMPTY
     #define XVIGRA_COMMA ,
+    #define XVIGRA_ARGUMENT tiny_vector<V, N, R>
     #define XVIGRA_NORM_FUNCTION(NAME, RESULT_TYPE, REDUCE_EXPR, REDUCE_OP)     \
     template <class V, index_t N, class R>                                      \
     inline auto NAME(tiny_vector<V, N, R> const & t) noexcept                   \
     {                                                                           \
-        using argument_type = tiny_vector<V, N, R>;                             \
-        using value_type = typename argument_type::value_type;                  \
         using result_type = RESULT_TYPE;                                        \
         result_type result = result_type();                                     \
-        for(index_t i=0; i<t.size(); ++i)                                       \
+        for(decltype(t.size()) i=0; i<t.size(); ++i)                            \
             result = REDUCE_EXPR(result REDUCE_OP NAME(t[i]));                  \
         return result;                                                          \
     }
 
     XVIGRA_NORM_FUNCTION(norm_l0, unsigned long long, XVIGRA_EMPTY, +)
-    XVIGRA_NORM_FUNCTION(norm_l1, squared_norm_type_t<argument_type>, XVIGRA_EMPTY, +)
-    XVIGRA_NORM_FUNCTION(norm_sq, squared_norm_type_t<argument_type>, XVIGRA_EMPTY, +)
-    XVIGRA_NORM_FUNCTION(norm_linf, decltype(norm_linf(std::declval<value_type>())),
-                                    std::max<result_type>, XVIGRA_COMMA)
+    XVIGRA_NORM_FUNCTION(norm_l1, squared_norm_type_t<XVIGRA_ARGUMENT>, XVIGRA_EMPTY, +)
+    XVIGRA_NORM_FUNCTION(norm_sq, squared_norm_type_t<XVIGRA_ARGUMENT>, XVIGRA_EMPTY, +)
+    XVIGRA_NORM_FUNCTION(norm_linf, decltype(norm_linf(std::declval<V>())),
+                                    max, XVIGRA_COMMA)
 
     #undef XVIGRA_EMPTY
     #undef XVIGRA_COMMA
+    #undef XVIGRA_ARGUMENT
     #undef XVIGRA_NORM_FUNCTION
 
     template <class V, index_t N, class R>
@@ -2906,7 +2885,7 @@ namespace xvigra
     {
         using result_type = norm_type_t<typename tiny_vector<V, N, R>::value_type>;
         result_type result = result_type();
-        for(index_t i=0; i<t.size(); ++i)
+        for(decltype(t.size()) i=0; i<t.size(); ++i)
             result = result + norm_lp_to_p(t[i], p);
         return result;
     }

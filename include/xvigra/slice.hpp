@@ -226,7 +226,7 @@ namespace xvigra
                     continue;
                 }
                 ++(*p);
-                if(*p < shape_[k])
+                if(*p < (int)shape_[k])
                 {
                     break;
                 }
@@ -431,7 +431,7 @@ namespace xvigra
                           shape_t<N> const & old_shape, shape_t<N> const & old_strides,
                           index_t ellipsis_size)
         {
-            for(; axis<point.size(); ++axis)
+            for(; axis<(index_t)point.size(); ++axis)
             {
                 point[axis] = 0;
                 shape = shape.push_back(old_shape[axis]);
@@ -456,7 +456,7 @@ namespace xvigra
         {
             bool has_ellipsis = false;
             index_t c = slice_dimension(has_ellipsis, a...);
-            vigra_precondition(c <= point.size(),
+            vigra_precondition(c <= (index_t)point.size(),
                 "slice has too many indices.");
             index_t ellipsis_size = has_ellipsis ? point.size() - c : 0;
             parse_slices(0, point, shape, strides, old_shape, old_strides, ellipsis_size, a...);
