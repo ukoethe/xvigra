@@ -84,13 +84,13 @@ namespace xvigra
         : public std::false_type
         {};
 
-        template <index_t N, class T>
-        struct tensor_concept<view_nd<N, T>>
+        template <class T, index_t N>
+        struct tensor_concept<view_nd<T, N>>
         : public std::true_type
         {};
 
-        template <index_t N, class T, class A>
-        struct tensor_concept<array_nd<N, T, A>>
+        template <class T, index_t N, class A>
+        struct tensor_concept<array_nd<T, N, A>>
         : public std::true_type
         {};
 

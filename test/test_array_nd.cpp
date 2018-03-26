@@ -43,13 +43,13 @@ namespace xvigra
     constexpr index_t ndim = 3;
     shape_t<> s{4, 3, 2};
 
-    // using array_nd_types = testing::Types<array_nd<ndim, uint8_t>,
-    //                                       array_nd<ndim, int>,
-    //                                       array_nd<runtime_size, int>,
-    //                                       array_nd<ndim, float>
+    // using array_nd_types = testing::Types<array_nd<uint8_t, ndim>,
+    //                                       array_nd<int, ndim>,
+    //                                       array_nd<int>,
+    //                                       array_nd<float, ndim>
     //                                      >;
 
-    using array_nd_types = testing::Types<array_nd<ndim, int>
+    using array_nd_types = testing::Types<array_nd<int, ndim>
                                          >;
 
     TYPED_TEST_SETUP(array_nd_test, array_nd_types);
@@ -331,7 +331,7 @@ namespace xvigra
         auto v9 = v0.diagonal();
         EXPECT_EQ(v9.shape(), shape_t<1>{2});
         // EXPECT_EQ(v9[0], (v0[{0, 0, 0}]));
-        // EXPECT_EQ(v9[1], (v0[{1, 1, 1}]));  // FIXME: andat to changed semantics of operator[]
+        // EXPECT_EQ(v9[1], (v0[{1, 1, 1}]));  // FIXME: adapt to changed semantics of operator[]
     }
 
     TYPED_TEST(array_nd_test, subarray)
@@ -539,7 +539,7 @@ namespace xvigra
         W data[24];
         std::iota(data, data + 24, 0);
 
-        view_nd<N, W> v(s, data);
+        view_nd<W, N> v(s, data);
 
         int count = 0;
         for (int i = 0; i < s[0]; ++i)
@@ -596,7 +596,7 @@ namespace xvigra
         EXPECT_EQ(v6.channel_axis(), 3);
         EXPECT_EQ(v6.dimension(), vs.dimension() + 1);
 
-        view_nd<4, T> vsized = v6;
+        view_nd<T, 4> vsized = v6;
         EXPECT_EQ(vsized.channel_axis(), 3);
         EXPECT_EQ(vsized.dimension(), 4);
     }

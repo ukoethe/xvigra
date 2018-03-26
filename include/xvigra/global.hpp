@@ -66,10 +66,10 @@ namespace xvigra
     template <class VALUETYPE, index_t N=runtime_size, class REPRESENTATION=void>
     class tiny_vector;
 
-    template <index_t N, class T>
+    template <class T, index_t N=runtime_size>
     class view_nd;
 
-    template <index_t N, class T, class A=XVIGRA_DEFAULT_ALLOCATOR(T)>
+    template <class T, index_t N=runtime_size, class A=XVIGRA_DEFAULT_ALLOCATOR(T)>
     class array_nd;
 
     /***********/

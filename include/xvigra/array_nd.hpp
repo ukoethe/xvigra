@@ -70,18 +70,18 @@ namespace xt
         };
     }
 
-    template <xvigra::index_t N, class T>
-    struct xcontainer_inner_types<xvigra::view_nd<N, T>>
+    template <class T, xvigra::index_t N>
+    struct xcontainer_inner_types<xvigra::view_nd<T, N>>
     {
-        using temporary_type = xvigra::view_nd<N, T>;
+        using temporary_type = xvigra::view_nd<T, N>;
     };
 
-    template <xvigra::index_t N, class T>
-    struct xiterable_inner_types<xvigra::view_nd<N, T>>
+    template <class T, xvigra::index_t N>
+    struct xiterable_inner_types<xvigra::view_nd<T, N>>
     {
         using inner_shape_type = xvigra::shape_t<N>;
-        using stepper = xindexed_stepper<xvigra::view_nd<N, T>, false>;
-        using const_stepper = xindexed_stepper<xvigra::view_nd<N, T>, true>;
+        using stepper = xindexed_stepper<xvigra::view_nd<T, N>, false>;
+        using const_stepper = xindexed_stepper<xvigra::view_nd<T, N>, true>;
     };
 }
 
@@ -222,10 +222,10 @@ namespace xvigra
     /* view_nd */
     /***********/
 
-    template <index_t N, class T>
+    template <class T, index_t N>
     class view_nd
-    : public xt::xiterable<view_nd<N, T>>
-    , public xt::xview_semantic<view_nd<N, T>>
+    : public xt::xiterable<view_nd<T, N>>
+    , public xt::xview_semantic<view_nd<T, N>>
     {
 
       public:
@@ -263,7 +263,7 @@ namespace xvigra
         // static constexpr xt::layout_type static_layout = xt::layout_type::row_major;
         // static constexpr bool contiguous_layout = true;
 
-        using self_type = view_nd<N, T>;
+        using self_type = view_nd<T, N>;
         using semantic_base = xt::xview_semantic<self_type>;
 
         using inner_shape_type = shape_type;
@@ -334,7 +334,7 @@ namespace xvigra
         {}
 
         template <index_t M>
-        view_nd(view_nd<M, T> const & other)
+        view_nd(view_nd<T, M> const & other)
         : shape_(other.shape())
         , byte_strides_(other.byte_strides())
         , axistags_(other.axistags())
@@ -616,10 +616,10 @@ namespace xvigra
                 view_nd<2, double> array2 = array3.bind(2, 15);
                 \endcode
              */
-        view_nd<((N < 0) ? runtime_size : N-1), T>
+        view_nd<T, ((N < 0) ? runtime_size : N-1)>
         bind(int axis, index_t index) const
         {
-            using view_t = view_nd<((N < 0) ? runtime_size : N-1), T>;
+            using view_t = view_nd<T, ((N < 0) ? runtime_size : N-1)>;
 
             XVIGRA_ASSERT_MSG(0 <= axis && axis < dimension() && 0 <= index && index < shape_[axis],
                 "view_nd::bind(): index out of range.");
@@ -649,7 +649,7 @@ namespace xvigra
                 corresponding axes.
              */
         template <index_t M>
-        view_nd<((N < 0) ? runtime_size : N-M), T>
+        decltype(auto)
         bind(shape_t<M> const & axes, shape_t<M> const & indices) const
         {
             static_assert(N == runtime_size || M <= N,
@@ -658,8 +658,7 @@ namespace xvigra
                       .bind(axes.pop_back(), indices.pop_back());
         }
 
-
-        view_nd<((N < 0) ? runtime_size : N-1), T>
+        decltype(auto)
         bind(shape_t<1> const & a, shape_t<1> const & i) const
         {
             return bind(a[0], i[0]);
@@ -671,7 +670,7 @@ namespace xvigra
             return *this;
         }
 
-        view_nd<runtime_size, T>
+        view_nd<T, runtime_size>
         bind(shape_t<runtime_size> const & axes, shape_t<runtime_size> const & indices) const
         {
             vigra_precondition(axes.size() == indices.size(),
@@ -679,7 +678,7 @@ namespace xvigra
             vigra_precondition(axes.size() <= dimension(),
                 "view_nd::bind(): axes.size() <= dimension() required.");
 
-            view_nd<runtime_size, T> a(*this);
+            view_nd<T, runtime_size> a(*this);
             if(axes.size() == 0)
                 return a;
             else
@@ -692,7 +691,7 @@ namespace xvigra
                 Only applicable when <tt>M <= N</tt> or <tt>N == runtime_size</tt>.
              */
         template <index_t M>
-        auto
+        decltype(auto)
         bind_left(shape_t<M> const & indices) const -> decltype(this->bind(indices, indices))
         {
             return bind(shape_t<M>::range((index_t)indices.size()), indices);
@@ -703,7 +702,7 @@ namespace xvigra
                 Only applicable when <tt>M <= N</tt> or <tt>N == runtime_size</tt>.
              */
         template <index_t M>
-        auto
+        decltype(auto)
         bind_right(shape_t<M> const & indices) const -> decltype(this->bind(indices, indices))
         {
             return bind(shape_t<M>::range((index_t)indices.size()) + (index_t)(dimension() - indices.size()),
@@ -717,7 +716,7 @@ namespace xvigra
              */
         template <class U=T,
                   VIGRA_REQUIRE<std::is_arithmetic<U>::value> >
-        view_nd<((N < 0) ? runtime_size : N-1), T>
+        view_nd<T, ((N < 0) ? runtime_size : N-1)>
         bind_channel(index_t d) const
         {
             int m = channel_axis();
@@ -746,7 +745,7 @@ namespace xvigra
             */
         template <class U=T,
                   VIGRA_REQUIRE<(U::static_size > 1)> >
-        view_nd<N, typename U::value_type>
+        view_nd<typename U::value_type, N>
         bind_channel(index_t i) const
         {
             vigra_precondition(0 <= i && i < U::static_size,
@@ -771,11 +770,11 @@ namespace xvigra
             */
         template <class U=T,
                   VIGRA_REQUIRE<(U::static_size > 0)> >
-        view_nd<(N == runtime_size ? runtime_size : N+1), typename U::value_type>
+        view_nd<typename U::value_type, (N == runtime_size ? runtime_size : N+1)>
         expand_elements(index_t d) const
         {
             using value_t = typename T::value_type;
-            using view_t  = view_nd<(N == runtime_size ? runtime_size : N + 1), value_t>;
+            using view_t  = view_nd<value_t, (N == runtime_size ? runtime_size : N + 1)>;
 
             vigra_precondition(0 <= d && d <= (index_t)dimension(),
                 "view_nd::expand_elements(d): 0 <= 'd' <= dimension() required.");
@@ -814,7 +813,7 @@ namespace xvigra
             */
         template <class U=T,
                   VIGRA_REQUIRE<(U::static_size > 1)> >
-        view_nd<runtime_size, typename U::value_type>
+        view_nd<typename U::value_type, runtime_size>
         ensure_channel_axis(index_t d) const
         {
             return expand_elements(d);
@@ -822,7 +821,7 @@ namespace xvigra
 
         template <class U=T,
                   VIGRA_REQUIRE<std::is_arithmetic<U>::value>>
-        view_nd<runtime_size, T>
+        view_nd<T, runtime_size>
         ensure_channel_axis(index_t d) const
         {
             vigra_precondition(d >= 0,
@@ -867,11 +866,11 @@ namespace xvigra
                                     FindAverage<double>());
                 \endcode
              */
-        view_nd <(N < 0) ? runtime_size : N+1, T>
+        view_nd <T, (N < 0) ? runtime_size : N+1>
         newaxis(index_t i,
                 tags::axis_tag tag = tags::axis_unknown) const
         {
-            using view_t = view_nd<(N < 0) ? runtime_size : N+1, T>;
+            using view_t = view_nd<T, (N < 0) ? runtime_size : N+1>;
             return view_t(shape_.insert(i, 1), tags::byte_strides = byte_strides_.insert(i, sizeof(T)),
                           axistags_.insert(i, tag), raw_data());
         }
@@ -904,9 +903,10 @@ namespace xvigra
                 assert(diagonal.shape(0) == 20);
                 \endcode
             */
-        view_nd<1, T> diagonal() const
+        view_nd<T, 1>
+        diagonal() const
         {
-            return view_nd<1, T>(shape_t<1>{min(shape_)},
+            return view_nd<T, 1>(shape_t<1>{min(shape_)},
                                  tags::byte_strides = shape_t<1>{sum(byte_strides_)},
                                  raw_data());
         }
@@ -961,10 +961,10 @@ namespace xvigra
                         assert(array(i, j) == transposed(j, i));
                 \endcode
             */
-        view_nd<N, T>
+        view_nd<T, N>
         transpose() const
         {
-            return view_nd<N, T>(reversed(shape_),
+            return view_nd<T, N>(reversed(shape_),
                                  tags::byte_strides = reversed(byte_strides_),
                                  reversed(axistags_),
                                  raw_data());
@@ -1011,45 +1011,47 @@ namespace xvigra
         }
 
         template <class S, class ... A>
-        auto view(S s, A ... a)
+        auto
+        view(S s, A ... a)
         {
             constexpr index_t M = detail::slice_dimension_traits<N, N, S, A...>::value;
             shape_type point(N, 0);
             shape_t<> new_shape, new_strides;
             detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s, a...);
             const index_t offset = dot(strides(), point);
-            using new_axistags_type = typename view_nd<M, T>::axistags_type;
-            return view_nd<M, T>(new_shape, new_strides,
+            using new_axistags_type = typename view_nd<T, M>::axistags_type;
+            return view_nd<T, M>(new_shape, new_strides,
                                  new_axistags_type(), (const_pointer)(data_ + offset));
         }
 
         template <index_t M = N>
-        view_nd<M, T> view()
+        view_nd<T, M>
+        view()
         {
             static_assert(M == runtime_size || N == runtime_size || M == N,
                 "view_nd::view(): desired dimension is incompatible with dimension().");
             vigra_precondition(M == runtime_size || M == (index_t)dimension(),
                 "view_nd::view(): desired dimension is incompatible with dimension().");
-            return view_nd<M, T>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
+            return view_nd<T, M>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
                                  tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
                                  axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
                                  raw_data());
         }
 
         template <index_t M = N>
-        view_nd<M, const_value_type> view() const
+        view_nd<const_value_type, M> view() const
         {
             return this->template view<M>();
         }
 
         template <index_t M = N>
-        view_nd<M, const_value_type> cview() const
+        view_nd<const_value_type, M> cview() const
         {
             static_assert(M == runtime_size || N == runtime_size || M == N,
                 "view_nd::cview(): desired dimension is incompatible with dimension().");
             vigra_precondition(M == runtime_size || M == dimension(),
                 "view_nd::cview(): desired dimension is incompatible with dimension().");
-            return view_nd<M, const_value_type>(
+            return view_nd<const_value_type, M>(
                         shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
                         tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
                         axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
@@ -1209,7 +1211,7 @@ namespace xvigra
             return *this;
         }
 
-        int channel_axis() const
+        index_t channel_axis() const
         {
             for(decltype(dimension()) k=0; k<dimension(); ++k)
                 if(axistags_[k] == tags::axis_c)
@@ -1217,7 +1219,7 @@ namespace xvigra
             return tags::axis_missing;
         }
 
-        int axis_index(tags::axis_tag tag) const
+        index_t axis_index(tags::axis_tag tag) const
         {
             for(decltype(dimension()) k=0; k<dimension(); ++k)
                 if(axistags_[k] == tag)
@@ -1236,30 +1238,30 @@ namespace xvigra
         }
     };
 
-    template <index_t N, class T>
-    inline auto
-    transpose(view_nd<N, T> const & array)
+    template <class T, index_t N>
+    inline decltype(auto)
+    transpose(view_nd<T, N> const & array)
     {
         return array.transpose();
     }
 
-    template <index_t N, class T>
-    inline auto
-    transpose(view_nd<N, T> & array)
+    template <class T, index_t N>
+    inline decltype(auto)
+    transpose(view_nd<T, N> & array)
     {
         return array.transpose();
     }
 
-    template <index_t N, class T, class A>
-    inline auto
-    transpose(array_nd<N, T, A> const & array)
+    template <class T, index_t N, class A>
+    inline decltype(auto)
+    transpose(array_nd<T, N, A> const & array)
     {
         return array.transpose();
     }
 
-    template <index_t N, class T, class A>
-    inline auto
-    transpose(array_nd<N, T, A> & array)
+    template <class T, index_t N, class A>
+    inline decltype(auto)
+    transpose(array_nd<T, N, A> & array)
     {
         return array.transpose();
     }
@@ -1275,12 +1277,12 @@ namespace xvigra
     /* array_nd */
     /************/
 
-    template <index_t N, class T, class Alloc>
+    template <class T, index_t N, class Alloc>
     class array_nd
-    : public view_nd<N, T>
+    : public view_nd<T, N>
     {
       public:
-        using view_type = view_nd<N, T>;
+        using view_type = view_nd<T, N>;
         using buffer_type = std::vector<typename view_type::value_type, Alloc>;
         using allocator_type = Alloc;
         using view_type::internal_dimension;
@@ -1296,7 +1298,7 @@ namespace xvigra
         using iterator = typename view_type::iterator;
         using const_iterator = typename view_type::const_iterator;
 
-        // using self_type = array_nd<N, T, Alloc>;
+        // using self_type = array_nd<T, N, Alloc>;
         // using semantic_base = xt::xview_semantic<self_type>;
         using semantic_base = typename view_type::semantic_base;
 
@@ -1494,7 +1496,7 @@ namespace xvigra
             /** construct by copying from a view_nd
              */
         template <index_t M, class U>
-        array_nd(view_nd<M, U> const & rhs,
+        array_nd(view_nd<U, M> const & rhs,
                  tags::memory_order order = c_order,
                  allocator_type const & alloc = allocator_type())
         : view_type(rhs.shape(), rhs.axistags(), 0, order)
