@@ -38,6 +38,7 @@ namespace xvigra
         using S = shape_t<>;
         using R = std::runtime_error;
         using namespace slicing;
+
         shape_t<3> old_shape{4,3,2}, old_strides = shape_to_strides(old_shape), point(old_shape.size());
         {
             shape_t<> shape, strides;
@@ -97,6 +98,16 @@ namespace xvigra
         }
         {
             shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides,
+                                 slice_vector().push_back(ellipsis())
+                                               .push_back(1)
+                                               .push_back(newaxis()));
+            EXPECT_EQ(point, (S{0,0,1}));
+            EXPECT_EQ(shape, old_shape.erase(2).push_back(1));
+            EXPECT_EQ(strides, old_strides.erase(2).push_back(0));
+        }
+        {
+            shape_t<> shape, strides;
             detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), 1, newaxis());
             EXPECT_EQ(point, (S{0,1,0}));
             EXPECT_EQ(shape, old_shape.erase(1).insert(1, 1));
@@ -105,6 +116,16 @@ namespace xvigra
         {
             shape_t<> shape, strides;
             detail::parse_slices(point, shape, strides, old_shape, old_strides, all(), -1, 1);
+            EXPECT_EQ(point, (S{0,2,1}));
+            EXPECT_EQ(shape, old_shape.erase(2).erase(1));
+            EXPECT_EQ(strides, old_strides.erase(2).erase(1));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides,
+                                 slice_vector().push_back(all())
+                                               .push_back(-1)
+                                               .push_back(1));
             EXPECT_EQ(point, (S{0,2,1}));
             EXPECT_EQ(shape, old_shape.erase(2).erase(1));
             EXPECT_EQ(strides, old_strides.erase(2).erase(1));
@@ -148,6 +169,37 @@ namespace xvigra
         {
             shape_t<> shape, strides;
             detail::parse_slices(point, shape, strides, old_shape, old_strides, slice(1, _, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides, range(1, _, 3));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides,
+                                 slice_vector{slice(1, _, 3)});
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides,
+                                 slice_vector().push_back(slice(1, _, 3)));
+            EXPECT_EQ(point, (S{1,0,0}));
+            EXPECT_EQ(shape, (S{1,3,2}));
+            EXPECT_EQ(strides, (old_strides*S{3,1,1}));
+        }
+        {
+            shape_t<> shape, strides;
+            detail::parse_slices(point, shape, strides, old_shape, old_strides,
+                                 slice_vector().emplace_back(slice(1, _, 3)));
             EXPECT_EQ(point, (S{1,0,0}));
             EXPECT_EQ(shape, (S{1,3,2}));
             EXPECT_EQ(strides, (old_strides*S{3,1,1}));
@@ -276,9 +328,9 @@ namespace xvigra
 
         nav1.set_free_axes(0);
         nav2.set_iterate_axes(1, 2);
-        for(index_t k=0; k<shape[1]; ++k)
+        for(std::size_t k=0; k<shape[1]; ++k)
         {
-            for(index_t i=0; i<shape[2]; ++i, ++nav1, nav2++)
+            for(std::size_t i=0; i<shape[2]; ++i, ++nav1, nav2++)
             {
                 EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav1)[0]), nullptr);
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[1]), k);
@@ -295,9 +347,9 @@ namespace xvigra
 
         nav1.set_free_axes(1);
         nav2.set_iterate_axes(0, 2);
-        for(index_t k=0; k<shape[0]; ++k)
+        for(std::size_t k=0; k<shape[0]; ++k)
         {
-            for(index_t i=0; i<shape[2]; ++i, ++nav1, ++nav2)
+            for(std::size_t i=0; i<shape[2]; ++i, ++nav1, ++nav2)
             {
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[0]), k);
                 EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav1)[1]), nullptr);
@@ -314,9 +366,9 @@ namespace xvigra
 
         nav1.set_free_axes(2);
         nav2.set_iterate_axes(0, 1);
-        for(index_t k=0; k<shape[0]; ++k)
+        for(std::size_t k=0; k<shape[0]; ++k)
         {
-            for(index_t i=0; i<shape[1]; ++i, ++nav1, ++nav2)
+            for(std::size_t i=0; i<shape[1]; ++i, ++nav1, ++nav2)
             {
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[0]), k);
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[1]), i);
@@ -339,9 +391,9 @@ namespace xvigra
 
         nav1.set_free_axes(0);
         nav2.set_iterate_axes(1, 2);
-        for(index_t i=0; i<shape[2]; ++i)
+        for(std::size_t i=0; i<shape[2]; ++i)
         {
-            for(index_t k=0; k<shape[1]; ++k, ++nav1, nav2++)
+            for(std::size_t k=0; k<shape[1]; ++k, ++nav1, nav2++)
             {
                 EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav1)[0]), nullptr);
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[1]), k);
@@ -358,9 +410,9 @@ namespace xvigra
 
         nav1.set_free_axes(1);
         nav2.set_iterate_axes(0, 2);
-        for(index_t i=0; i<shape[2]; ++i)
+        for(std::size_t i=0; i<shape[2]; ++i)
         {
-            for(index_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
+            for(std::size_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
             {
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[0]), k);
                 EXPECT_NE(xtl::get_if<xt::xall_tag>(&(*nav1)[1]), nullptr);
@@ -377,9 +429,9 @@ namespace xvigra
 
         nav1.set_free_axes(2);
         nav2.set_iterate_axes(0, 1);
-        for(index_t i=0; i<shape[1]; ++i)
+        for(std::size_t i=0; i<shape[1]; ++i)
         {
-            for(index_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
+            for(std::size_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
             {
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[0]), k);
                 EXPECT_EQ(*xtl::get_if<int>(&(*nav1)[1]), i);
