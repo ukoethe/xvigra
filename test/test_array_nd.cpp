@@ -91,7 +91,7 @@ namespace xvigra
 
         EXPECT_EQ(v1.shape(), s);
         EXPECT_EQ(v1.strides(), (S{ 6,2,1 }));
-        EXPECT_EQ(v1.byte_strides(), (S{ 6,2,1 }*sizeof(T)));
+        // EXPECT_EQ(v1.byte_strides(), (S{ 6,2,1 }*sizeof(T)));
         EXPECT_EQ(v1.raw_data(), &data1[0]);
         EXPECT_TRUE(v1.has_data());
         EXPECT_TRUE(v1.is_consecutive());

@@ -135,31 +135,31 @@ namespace xvigra
 
             // Support for tags::byte_strides keyword argument
             // to pass strides in units of bytes rather than `sizeof(T)`.
-        template <int N>
-        struct byte_strides_proxy
-        {
-            tiny_vector<index_t, N> value;
-        };
+        // template <int N>
+        // struct byte_strides_proxy
+        // {
+        //     tiny_vector<index_t, N> value;
+        // };
 
-        struct byte_strides_tag
-        {
-            template <index_t N, class R>
-            byte_strides_proxy<N> operator=(tiny_vector<index_t, N, R> const & s) const
-            {
-                return {s};
-            }
+        // struct byte_strides_tag
+        // {
+        //     template <index_t N, class R>
+        //     byte_strides_proxy<N> operator=(tiny_vector<index_t, N, R> const & s) const
+        //     {
+        //         return {s};
+        //     }
 
-            template <index_t N, class R>
-            byte_strides_proxy<N> operator()(tiny_vector<index_t, N, R> const & s) const
-            {
-                return {s};
-            }
-        };
+        //     template <index_t N, class R>
+        //     byte_strides_proxy<N> operator()(tiny_vector<index_t, N, R> const & s) const
+        //     {
+        //         return {s};
+        //     }
+        // };
 
-        namespace
-        {
-            byte_strides_tag byte_strides;
-        }
+        // namespace
+        // {
+        //     byte_strides_tag byte_strides;
+        // }
 
     } // namespace tags
 
@@ -277,7 +277,7 @@ namespace xvigra
 
         unsigned is_consecutive_impl() const
         {
-            return (size() == 0 || (char*)&operator[](shape_ - 1) == data_ + (size()-1)*sizeof(T))
+            return (size() == 0 || &operator[](shape_ - 1) == &operator[](size()-1))
                          ? consecutive_memory_flag
                          : 0;
         }
@@ -287,7 +287,7 @@ namespace xvigra
             if(this != &rhs)
             {
                 shape_.swap(rhs.shape_);
-                byte_strides_.swap(rhs.byte_strides_);
+                strides_.swap(rhs.strides_);
                 axistags_.swap(rhs.axistags_);
                 std::swap(data_, rhs.data_);
                 std::swap(flags_, rhs.flags_);
@@ -301,15 +301,15 @@ namespace xvigra
             {
                 if (shape_[k] == 1)
                 {
-                    byte_strides_[k] = 0;
+                    strides_[k] = 0;
                 }
             }
         }
 
         shape_type shape_;
-        shape_type byte_strides_;
+        shape_type strides_;
         axistags_type axistags_;
-        char * data_;
+        pointer data_;
         unsigned flags_;
 
       public:
@@ -319,7 +319,7 @@ namespace xvigra
              */
         view_nd()
         : shape_()
-        , byte_strides_()
+        , strides_()
         , axistags_()
         , data_(0)
         , flags_(0)
@@ -327,18 +327,18 @@ namespace xvigra
 
         view_nd(view_nd const & other)
         : shape_(other.shape())
-        , byte_strides_(other.byte_strides())
+        , strides_(other.strides())
         , axistags_(other.axistags())
-        , data_((char*)other.raw_data())
+        , data_(const_cast<pointer>(other.raw_data()))
         , flags_(other.flags() & ~owns_memory_flag)
         {}
 
         template <index_t M>
         view_nd(view_nd<T, M> const & other)
         : shape_(other.shape())
-        , byte_strides_(other.byte_strides())
+        , strides_(other.strides())
         , axistags_(other.axistags())
-        , data_((char*)other.raw_data())
+        , data_(const_cast<pointer>(other.raw_data()))
         , flags_(other.flags() & ~owns_memory_flag)
         {
             // static_assert(CompatibleDimensions<M, N>::value,  // FIXME
@@ -372,22 +372,22 @@ namespace xvigra
                 and pointer.
              */
         view_nd(shape_type const & shape,
-                 shape_type const & strides,
-                 const_pointer ptr)
-        : view_nd(shape, strides,
-                  axistags_type(shape.size(), tags::axis_unknown), ptr)
-        {}
-
-            /** Construct from shape, strides (offset of a sample to the
-                next, measured in units if `sizeof(T)`) for every dimension,
-                and pointer.
-             */
-        view_nd(shape_type const & shape,
-                tags::byte_strides_proxy<N> const & strides,
+                shape_type const & strides,
                 const_pointer ptr)
         : view_nd(shape, strides,
                   axistags_type(shape.size(), tags::axis_unknown), ptr)
         {}
+
+        //     /** Construct from shape, strides (offset of a sample to the
+        //         next, measured in units if `sizeof(T)`) for every dimension,
+        //         and pointer.
+        //      */
+        // view_nd(shape_type const & shape,
+        //         tags::byte_strides_proxy<N> const & strides,
+        //         const_pointer ptr)
+        // : view_nd(shape, strides,
+        //           axistags_type(shape.size(), tags::axis_unknown), ptr)
+        // {}
 
             /** Construct from shape, strides (offset of a sample to the
                 next, measured in units if `sizeof(T)`), axistags for every
@@ -398,9 +398,9 @@ namespace xvigra
                 axistags_type   const & axistags,
                 const_pointer ptr)
         : shape_(shape)
-        , byte_strides_(strides*sizeof(T))
+        , strides_(strides)
         , axistags_(axistags)
-        , data_((char*)ptr)
+        , data_(const_cast<pointer>(ptr))
         , flags_(is_consecutive_impl())
         {
             XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
@@ -408,23 +408,23 @@ namespace xvigra
             zero_singleton_strides();
         }
 
-            /** Construct from shape, byte strides (offset of a sample to the
-                next, measured in bytes), axistags for every dimension, and pointer.
-             */
-        view_nd(shape_type const & shape,
-                tags::byte_strides_proxy<N> const & strides,
-                axistags_type const & axistags,
-                const_pointer ptr)
-        : shape_(shape)
-        , byte_strides_(strides.value)
-        , axistags_(axistags)
-        , data_((char*)ptr)
-        , flags_(is_consecutive_impl())
-        {
-            XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
-                "view_nd(): invalid shape.");
-            zero_singleton_strides();
-        }
+        //     /** Construct from shape, byte strides (offset of a sample to the
+        //         next, measured in bytes), axistags for every dimension, and pointer.
+        //      */
+        // view_nd(shape_type const & shape,
+        //         tags::byte_strides_proxy<N> const & strides,
+        //         axistags_type const & axistags,
+        //         const_pointer ptr)
+        // : shape_(shape)
+        // , byte_strides_(strides.value)
+        // , axistags_(axistags)
+        // , data_((char*)ptr)
+        // , flags_(is_consecutive_impl())
+        // {
+        //     XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
+        //         "view_nd(): invalid shape.");
+        //     zero_singleton_strides();
+        // }
 
         template <class E>
         self_type& operator=(const xt::xexpression<E>& e)
@@ -441,7 +441,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
-            return *(pointer)(data_ + std::inner_product(first, last, byte_strides_.begin(), 0l));
+            return *(data_ + std::inner_product(strides_.begin(), strides_.end(), first, 0l));
         }
 
             // needed for operator==
@@ -450,7 +450,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
-            return *(const_pointer)(data_ + std::inner_product(first, last, byte_strides_.begin(), 0l));
+            return *(data_ + std::inner_product(strides_.begin(), strides_.end(), first, 0l));
         }
 
             // needed for operator==
@@ -522,14 +522,14 @@ namespace xvigra
         reference operator[](shape_type const & d)
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(pointer)(data_ + dot(d, byte_strides_));
+            return *(data_ + dot(d, strides_));
         }
 
             /** Access element via scalar index w.r.t. raw memory.
              */
         reference operator[](size_type i)
         {
-            return *((pointer)data_ + i);
+            return *(data_ + i);
         }
 
             /** Get element.
@@ -537,21 +537,21 @@ namespace xvigra
         const_reference operator[](shape_type const & d) const
         {
             XVIGRA_ASSERT_INSIDE(d);
-            return *(const_pointer)(data_ + dot(d, byte_strides_));
+            return *(data_ + dot(d, strides_));
         }
 
             /** Get element via scalar index w.r.t. raw memory.
              */
         const_reference operator[](size_type i) const
         {
-            return *((const_pointer)data_ + i);
+            return *(data_ + i);
         }
 
             /** Access the array's first element.
              */
         reference operator()()
         {
-            return *(pointer)data_;
+            return *data_;
         }
 
             /** 1D array access. Use only if <tt>dimension() <= 1</tt>.
@@ -560,7 +560,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(pointer)(data_ + i*byte_strides_[dimension()-1]);
+            return *(data_ + i*strides_[dimension()-1]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -572,14 +572,14 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, byte_strides_));
+            return *(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
             /** Access the array's first element.
              */
         const_reference operator()() const
         {
-            return *(const_pointer)data_;
+            return *data_;
         }
 
             /** 1D array access. Use only if <tt>dimension() <= 1</tt>.
@@ -588,7 +588,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
-            return *(const_pointer)(data_ + i*byte_strides_[dimension()-1]);
+            return *(data_ + i*strides_[dimension()-1]);
         }
 
             /** N-D array access. Number of indices must match <tt>dimension()</tt>.
@@ -600,7 +600,7 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
-            return *(const_pointer)(data_ + dot(shape_t<M>{i0, i1, i...}, byte_strides_));
+            return *(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
             /** Bind 'axis' to 'index'.
@@ -634,7 +634,7 @@ namespace xvigra
             else
             {
                 return view_t(shape_.erase(axis),
-                              tags::byte_strides = byte_strides_.erase(axis),
+                              strides_.erase(axis),
                               axistags_.erase(axis),
                               &operator[](point));
             }
@@ -781,7 +781,7 @@ namespace xvigra
 
             constexpr index_t s = T::static_size;
             return view_t(shape_.insert(d, s),
-                          tags::byte_strides = byte_strides_.insert(d, sizeof(value_t)),
+                          (strides_*U::static_size).insert(d, 1),
                           axistags_.insert(d, tags::axis_c),
                           reinterpret_cast<value_t*>(data_));
         }
@@ -871,7 +871,7 @@ namespace xvigra
                 tags::axis_tag tag = tags::axis_unknown) const
         {
             using view_t = view_nd<T, (N < 0) ? runtime_size : N+1>;
-            return view_t(shape_.insert(i, 1), tags::byte_strides = byte_strides_.insert(i, sizeof(T)),
+            return view_t(shape_.insert(i, 1), strides_.insert(i, 0),
                           axistags_.insert(i, tag), raw_data());
         }
 
@@ -907,7 +907,7 @@ namespace xvigra
         diagonal() const
         {
             return view_nd<T, 1>(shape_t<1>{min(shape_)},
-                                 tags::byte_strides = shape_t<1>{sum(byte_strides_)},
+                                 shape_t<1>{sum(strides_)},
                                  raw_data());
         }
 
@@ -942,8 +942,8 @@ namespace xvigra
             }
             vigra_precondition(is_inside(p) && all_less_equal(p, q) && all_less_equal(q, shape_),
                 "view_nd::subarray(): invalid subarray limits.");
-            const index_t offset = dot(byte_strides_, p);
-            return view_nd(q - p, tags::byte_strides = byte_strides_, axistags_, (const_pointer)(data_ + offset));
+            const index_t offset = dot(strides_, p);
+            return view_nd(q - p, strides_, axistags_, data_ + offset);
         }
 
             /** Transpose an array. If N==2, this implements the usual matrix transposition.
@@ -965,7 +965,7 @@ namespace xvigra
         transpose() const
         {
             return view_nd<T, N>(reversed(shape_),
-                                 tags::byte_strides = reversed(byte_strides_),
+                                 reversed(strides_),
                                  reversed(axistags_),
                                  raw_data());
         }
@@ -998,7 +998,7 @@ namespace xvigra
                 "view_nd::transpose(): permutation.size() doesn't match dimension().");
             shape_type p(permutation);
             view_nd res(transposed(shape_, p),
-                        tags::byte_strides = transposed(byte_strides_, p),
+                        transposed(strides_, p),
                         transposed(axistags_, p),
                         raw_data());
             return res;
@@ -1007,7 +1007,7 @@ namespace xvigra
         view_nd
         transpose(tags::memory_order order) const
         {
-            return transpose(detail::permutation_to_order(byte_strides_, order));
+            return transpose(detail::permutation_to_order(strides_, order));
         }
 
         template <class S, class ... A>
@@ -1021,7 +1021,7 @@ namespace xvigra
             const index_t offset = dot(strides(), point);
             using new_axistags_type = typename view_nd<T, M>::axistags_type;
             return view_nd<T, M>(new_shape, new_strides,
-                                 new_axistags_type(), (const_pointer)(data_ + offset));
+                                 new_axistags_type(), data_ + offset);
         }
 
         template <index_t M = N>
@@ -1033,7 +1033,7 @@ namespace xvigra
             vigra_precondition(M == runtime_size || M == (index_t)dimension(),
                 "view_nd::view(): desired dimension is incompatible with dimension().");
             return view_nd<T, M>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
-                                 tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
+                                 shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
                                  axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
                                  raw_data());
         }
@@ -1052,10 +1052,10 @@ namespace xvigra
             vigra_precondition(M == runtime_size || M == dimension(),
                 "view_nd::cview(): desired dimension is incompatible with dimension().");
             return view_nd<const_value_type, M>(
-                        shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
-                        tags::byte_strides = shape_t<M>(byte_strides_.begin(), byte_strides_.begin()+dimension()),
-                        axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
-                        raw_data());
+                         shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
+                         shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
+                         axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
+                         raw_data());
         }
 
         // pointer data()
@@ -1098,14 +1098,19 @@ namespace xvigra
             return shape_;
         }
 
-        shape_type const & byte_strides() const
-        {
-            return byte_strides_;
-        }
+        // shape_type const & byte_strides() const
+        // {
+        //     return byte_strides_;
+        // }
 
-        shape_type strides() const
+        // shape_type strides() const
+        // {
+        //     return byte_strides_ / sizeof(value_type);
+        // }
+
+        shape_type const & strides() const
         {
-            return byte_strides_ / sizeof(value_type);
+            return strides_;
         }
 
             /** number of the elements in the array.
@@ -1182,7 +1187,7 @@ namespace xvigra
             */
         tiny_vector<char *, 2> memory_range() const
         {
-            return tiny_vector<char *, 2>{ data_, (char*)(1 + &(*this)[shape() - 1]) };
+            return tiny_vector<char *, 2>{ (char*)data_, (char*)(1 + &(*this)[shape() - 1]) };
         }
 
         unsigned flags() const
@@ -1353,7 +1358,7 @@ namespace xvigra
         {
             vigra_precondition(all_greater_equal(shape, 0),
                 "array_nd(): invalid shape.");
-            this->data_  = (char*)&allocated_data_[0];
+            this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         }
 
@@ -1363,7 +1368,7 @@ namespace xvigra
         : view_type(e.shape(), 0)
         , allocated_data_(this->size())
         {
-            this->data_  = (char*)&allocated_data_[0];
+            this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
             semantic_base::assign(std::forward<E>(e));
         }
@@ -1381,7 +1386,7 @@ namespace xvigra
         // {
         //     vigra_precondition(all_greater_equal(shape, 0),
         //         "array_nd(): invalid shape.");
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1402,7 +1407,7 @@ namespace xvigra
         // {
         //     vigra_precondition(all_greater_equal(shape, 0),
         //         "array_nd(): invalid shape.");
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1418,7 +1423,7 @@ namespace xvigra
         // {
         //     vigra_precondition(all_greater_equal(shape, 0),
         //         "array_nd(): invalid shape.");
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1436,7 +1441,7 @@ namespace xvigra
         //         "array_nd(): invalid shape.");
         //     vigra_precondition(this->size() == init.size(),
         //         "array_nd(): initializer_list has wrong size.");
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1455,7 +1460,7 @@ namespace xvigra
         //         "array_nd(): invalid shape.");
         //     vigra_precondition(this->size() == init.size(),
         //         "array_nd(): initializer_list has wrong size.");
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1468,7 +1473,7 @@ namespace xvigra
         // : view_type(shape_t<1>(init.size()), 0, c_order)
         // , allocated_data_(init, alloc)
         // {
-        //     this->data_  = (char*)&allocated_data_[0];
+        //     this->data_  = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
 
@@ -1478,7 +1483,7 @@ namespace xvigra
         : view_type(rhs)
         , allocated_data_(rhs.allocated_data_)
         {
-            this->data_  = (char*)&allocated_data_[0];
+            this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         }
 
@@ -1489,7 +1494,7 @@ namespace xvigra
         , allocated_data_(std::move(rhs.allocated_data_))
         {
             this->swap_impl(rhs);
-            this->data_  = (char*)&allocated_data_[0];
+            this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         }
 
@@ -1520,7 +1525,7 @@ namespace xvigra
                     allocated_data_.emplace_back(conditional_cast<std::is_arithmetic<T>::value, T>(*k));
                 }
             }
-            this->data_  = (char*)&allocated_data_[0];
+            this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         }
 
@@ -1550,7 +1555,7 @@ namespace xvigra
         //             data.emplace_back(detail::RequiresExplicitCast<T>::cast(u));
         //         });
 
-        //     this->data_ = (char*)&allocated_data_[0];
+        //     this->data_ = &allocated_data_[0];
         //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         // }
     };
