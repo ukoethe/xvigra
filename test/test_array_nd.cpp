@@ -43,14 +43,14 @@ namespace xvigra
     constexpr index_t ndim = 3;
     shape_t<> s{4, 3, 2};
 
-    // using array_nd_types = testing::Types<array_nd<uint8_t, ndim>,
-    //                                       array_nd<int, ndim>,
-    //                                       array_nd<int>,
-    //                                       array_nd<float, ndim>
-    //                                      >;
-
-    using array_nd_types = testing::Types<array_nd<int, ndim>
+    using array_nd_types = testing::Types<array_nd<uint8_t, ndim>,
+                                          array_nd<int, ndim>,
+                                          array_nd<int>,
+                                          array_nd<float, ndim>
                                          >;
+
+    // using array_nd_types = testing::Types<array_nd<int, ndim>
+    //                                      >;
 
     TYPED_TEST_SETUP(array_nd_test, array_nd_types);
 
@@ -106,10 +106,6 @@ namespace xvigra
 
         EXPECT_TRUE(any(v1));
         EXPECT_FALSE(all(v1));
-
-        std::cerr << v1 << "\n";
-        std::cerr << v1.view(xt::ellipsis(), 0) << "\n";
-        std::cerr << v1.view(slice(0,4,2)) << "\n";
 
         A a0(s);
 
@@ -468,7 +464,69 @@ namespace xvigra
         }
     }
 
-    TYPED_TEST(array_nd_test, bind)
+    TYPED_TEST(array_nd_test, slicing)
+    {
+        using A = TypeParam;
+        using T = typename A::value_type;
+        using V = typename A::view_type;
+
+        std::vector<T> data1(prod(s));
+        std::iota(data1.begin(), data1.end(), 0);
+        V v1(s, &data1[0]);
+
+        using namespace slicing;
+        {
+            xt::slice_vector sv;
+            sv.push_back(xt::range(_,_,2));
+            auto xv = xt::dynamic_view(v1, sv);
+            auto vv = v1.view(slice(_,_,2));
+            auto dv = v1.view(slice_vector().push_back(slice(_,_,2)));
+            EXPECT_EQ(vv.shape(), (shape_t<>{2,3,2}));
+            EXPECT_EQ(dv.shape(), (shape_t<>{2,3,2}));
+            EXPECT_EQ(xv, vv);
+            EXPECT_EQ(xv, dv);
+        }
+        {
+            xt::slice_vector sv;
+            sv.push_back(ellipsis());
+            sv.push_back(xt::range(_,_,2));
+            auto xv = xt::dynamic_view(v1, sv);
+            auto vv = v1.view(ellipsis(), slice(_,_,2));
+            auto dv = v1.view(slice_vector().push_back(ellipsis()).push_back(slice(_,_,2)));
+            EXPECT_EQ(vv.shape(), (shape_t<>{4,3,1}));
+            EXPECT_EQ(dv.shape(), (shape_t<>{4,3,1}));
+            EXPECT_EQ(xv, vv);
+            EXPECT_EQ(xv, dv);
+        }
+        {
+            xt::slice_vector sv;
+            sv.push_back(newaxis());
+            sv.push_back(all());
+            sv.push_back(xt::range(_,_,2));
+            auto xv = xt::dynamic_view(v1, sv);
+            auto vv = v1.view(newaxis(), all(), slice(_,_,2));
+            auto dv = v1.view(slice_vector().push_back(newaxis()).push_back(all()).push_back(slice(_,_,2)));
+            EXPECT_EQ(vv.shape(), (shape_t<>{1,4,2,2}));
+            EXPECT_EQ(dv.shape(), (shape_t<>{1,4,2,2}));
+            EXPECT_EQ(xv, vv);
+            EXPECT_EQ(xv, dv);
+        }
+        {
+            xt::slice_vector sv;
+            sv.push_back(1);
+            sv.push_back(ellipsis());
+            sv.push_back(0);
+            auto xv = xt::dynamic_view(v1, sv);
+            auto vv = v1.view(1, ellipsis(), 0);
+            auto dv = v1.view(slice_vector().push_back(1).push_back(ellipsis()).push_back(0));
+            EXPECT_EQ(vv.shape(), (shape_t<>{3}));
+            EXPECT_EQ(dv.shape(), (shape_t<>{3}));
+            EXPECT_EQ(xv, vv);
+            EXPECT_EQ(xv, dv);
+        }
+    }
+
+    TYPED_TEST(array_nd_test, functions)
     {
         using A = TypeParam;
         using T = typename A::value_type;

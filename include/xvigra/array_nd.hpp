@@ -81,6 +81,7 @@ namespace xt
     {
         using inner_shape_type = xvigra::shape_t<N>;
         using stepper = xindexed_stepper<xvigra::view_nd<T, N>, false>;
+        // using stepper = xindexed_stepper<xvigra::view_nd<T, N>, std::is_const<T>::value>;
         using const_stepper = xindexed_stepper<xvigra::view_nd<T, N>, true>;
     };
 }
@@ -333,8 +334,16 @@ namespace xvigra
         , flags_(other.flags() & ~owns_memory_flag)
         {}
 
+        // view_nd(view_nd && other)
+        // : shape_(other.shape())
+        // , strides_(other.strides())
+        // , axistags_(other.axistags())
+        // , data_(const_cast<pointer>(other.raw_data()))
+        // , flags_(other.flags() & ~owns_memory_flag)
+        // {}
+
         template <index_t M>
-        view_nd(view_nd<T, M> const & other)
+        view_nd(view_nd<std::remove_const_t<T>, M> const & other)
         : shape_(other.shape())
         , strides_(other.strides())
         , axistags_(other.axistags())
@@ -395,7 +404,7 @@ namespace xvigra
              */
         view_nd(shape_type const & shape,
                 shape_type const & strides,
-                axistags_type   const & axistags,
+                axistags_type const & axistags,
                 const_pointer ptr)
         : shape_(shape)
         , strides_(strides)
@@ -439,7 +448,7 @@ namespace xvigra
         template <class It>
         reference element(It first, It last)
         {
-            XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
+             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
             return *(data_ + std::inner_product(strides_.begin(), strides_.end(), first, 0l));
         }
@@ -1010,21 +1019,15 @@ namespace xvigra
             return transpose(detail::permutation_to_order(strides_, order));
         }
 
-        template <class S, class ... A>
-        auto
-        view(S s, A ... a)
+            // cast the type of an array to its base view
+        view_nd & view()
         {
-            constexpr index_t M = detail::slice_dimension_traits<N, N, S, A...>::value;
-            shape_type point(N, 0);
-            shape_t<> new_shape, new_strides;
-            detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s, a...);
-            const index_t offset = dot(strides(), point);
-            using new_axistags_type = typename view_nd<T, M>::axistags_type;
-            return view_nd<T, M>(new_shape, new_strides,
-                                 new_axistags_type(), data_ + offset);
+            return *this;
         }
 
-        template <index_t M = N>
+            // cast the type of a view to dimension M
+            // (useful to create static views from matching runtime_size arrays for better performance)
+        template <index_t M>
         view_nd<T, M>
         view()
         {
@@ -1038,24 +1041,96 @@ namespace xvigra
                                  raw_data());
         }
 
-        template <index_t M = N>
-        view_nd<const_value_type, M> view() const
+            // get a view with static slicing
+        template <class S, class ... A,
+                  VIGRA_REQUIRE<!std::is_base_of<slice_vector, S>::value>>
+        auto
+        view(S s, A ... a)
         {
-            return this->template view<M>();
+            constexpr index_t M = detail::slice_dimension_traits<N, S, A...>::value;
+            shape_type point(dimension(), 0);
+            shape_t<> new_shape, new_strides;
+            detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s, a...);
+            const index_t offset = dot(strides(), point);
+            using new_axistags_type = typename view_nd<T, M>::axistags_type;
+            return view_nd<T, M>(new_shape, new_strides,
+                                 new_axistags_type(), data_ + offset);
         }
 
-        template <index_t M = N>
+            // get a view with dynamic slicing
+        auto
+        view(slice_vector const & s)
+        {
+            shape_type point(dimension(), 0);
+            shape_t<> new_shape, new_strides;
+            detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s);
+            const index_t offset = dot(strides(), point);
+            using new_axistags_type = typename view_nd<T>::axistags_type;
+            return view_nd<T>(new_shape, new_strides,
+                              new_axistags_type(), data_ + offset);
+        }
+
+            // cast the type of a const array to its base view
+        view_nd const &
+        view() const
+        {
+            return *this;
+        }
+
+            // cast the type of a const view to dimension M
+            // (useful to create static views from matching runtime_size arrays for better performance)
+        template <index_t M>
+        view_nd<const_value_type, M>
+        view() const
+        {
+            return const_cast<self_type *>(this)->template view<M>();
+        }
+
+            // get a const view with static slicing
+        template <class S, class ... A,
+                  VIGRA_REQUIRE<!std::is_base_of<slice_vector, S>::value>>
+        view_nd<const_value_type, detail::slice_dimension_traits<N, S, A...>::value>
+        view(S s, A ... a) const
+        {
+            return const_cast<self_type *>(this)->view(s, a...);
+        }
+
+            // get a const view with dynamic slicing
+        auto
+        view(slice_vector const & s) const -> view_nd<const_value_type, runtime_size>
+        {
+            return const_cast<self_type *>(this)->view(s);
+        }
+
+            // cast the type of an array to its const base view
+        view_nd const &
+        cview() const
+        {
+            return *this;
+        }
+
+            // cast the type of a view or const view to dimension M
+            // (useful to create static views from matching runtime_size arrays for better performance)
+        template <index_t M>
         view_nd<const_value_type, M> cview() const
         {
-            static_assert(M == runtime_size || N == runtime_size || M == N,
-                "view_nd::cview(): desired dimension is incompatible with dimension().");
-            vigra_precondition(M == runtime_size || M == dimension(),
-                "view_nd::cview(): desired dimension is incompatible with dimension().");
-            return view_nd<const_value_type, M>(
-                         shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
-                         shape_t<M>(strides_.begin(), strides_.begin()+dimension()),
-                         axis_tags<M>(axistags_.begin(), axistags_.begin()+dimension()),
-                         raw_data());
+            return const_cast<self_type *>(this)->template view<M>();
+        }
+
+            // get a const view with static slicing
+        template <class S, class ... A,
+                  VIGRA_REQUIRE<!std::is_base_of<slice_vector, S>::value>>
+        view_nd<const_value_type, detail::slice_dimension_traits<N, S, A...>::value>
+        cview(S s, A ... a) const
+        {
+            return const_cast<self_type *>(this)->view(s, a...);
+        }
+
+            // get a const view with dynamic slicing
+        auto
+        cview(slice_vector const & s) const -> view_nd<const_value_type, runtime_size>
+        {
+            return const_cast<self_type *>(this)->view(s);
         }
 
         // pointer data()
@@ -1288,8 +1363,6 @@ namespace xvigra
     {
       public:
         using view_type = view_nd<T, N>;
-        using buffer_type = std::vector<typename view_type::value_type, Alloc>;
-        using allocator_type = Alloc;
         using view_type::internal_dimension;
         using value_type = typename view_type::value_type;
         using pointer = typename view_type::pointer;
@@ -1302,6 +1375,12 @@ namespace xvigra
         using axistags_type = typename view_type::axistags_type;
         using iterator = typename view_type::iterator;
         using const_iterator = typename view_type::const_iterator;
+
+        using raw_value_type = std::decay_t<value_type>;
+        using allocator_type = Alloc;
+        using buffer_type = std::vector<value_type, Alloc>;
+        // using allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<raw_value_type>;
+        // using buffer_type = std::vector<std::decay_t<value_type>, Alloc>;
 
         // using self_type = array_nd<T, N, Alloc>;
         // using semantic_base = xt::xview_semantic<self_type>;
