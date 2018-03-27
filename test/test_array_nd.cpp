@@ -62,6 +62,10 @@ namespace xvigra
         EXPECT_TRUE(tensor_concept<A &>::value);
         EXPECT_TRUE(tensor_concept<V>::value);
         EXPECT_TRUE(tensor_concept<V &>::value);
+        bool raw_data_api = has_raw_data_api<A>::value;
+        EXPECT_TRUE(raw_data_api);
+        raw_data_api = has_raw_data_api<V>::value;
+        EXPECT_TRUE(raw_data_api);
      }
 
     TYPED_TEST(array_nd_test, constructor)
@@ -136,12 +140,14 @@ namespace xvigra
 
                     EXPECT_EQ(*iter1, c);
                     EXPECT_FALSE(iter1 == end1);
+                    // EXPECT_TRUE(iter1 < end1); // FIXME: xtensor bug
                 }
             }
         }
         EXPECT_FALSE(v1.is_inside(S{ -1,-1,-1 }));
         EXPECT_TRUE(v1.is_outside(S{ -1,-1,-1 }));
         EXPECT_TRUE(iter1 == end1);
+        // EXPECT_FALSE(iter1 < end1); // FIXME: xtensor bug
 
         V v2(s, default_axistags(3, false, f_order), &data1[0], f_order);
 
@@ -220,6 +226,146 @@ namespace xvigra
         // A a7(s, { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 });
         // EXPECT_EQ(a7.shape(), s);
         // EXPECT_TRUE(a7 == v1);
+    }
+
+    TYPED_TEST(array_nd_test, assignment)
+    {
+        using A = TypeParam;
+        using T = typename A::value_type;
+        // using S = typename A::shape_type;
+        using V = typename A::view_type;
+
+        std::vector<T> data0(prod(s), 0), data1(prod(s));
+        std::iota(data1.begin(), data1.end(), 0);
+
+        V v0(s, &data1[0]);
+        V v1(s, &data0[0]);
+
+        v1.set_channel_axis(2);
+
+        v0.swap_data(v1);
+        EXPECT_EQ(v0.raw_data(), &data1[0]);
+        EXPECT_EQ(v1.raw_data(), &data0[0]);
+
+        index_t count = 0;
+        for (index_t k = 0; k < v0.size(); ++k, ++count)
+        {
+            EXPECT_EQ(v0[k], 0);
+            EXPECT_EQ(v1[k], count);
+        }
+
+        v0 = 2;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 2);
+        }
+
+        v0 = 1;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 1);
+        }
+
+        v0 += 2;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 3);
+        }
+
+        v0 -= 1;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 2);
+        }
+
+        v0 *= 5;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 10);
+        }
+
+        v0 /= 10;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 1);
+        }
+
+        v0 *= v1;
+        EXPECT_EQ(v0, v1);
+
+        v0 += v1;
+        v0 /= 2;
+        EXPECT_EQ(v0, v1);
+
+        v0 += v1;
+        v0 -= v1;
+        EXPECT_EQ(v0, v1);
+
+        v0 += 1;
+        v0 /= v0;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 1);
+        }
+
+        v0 -= v0;
+        for (int k = 0; k < v0.size(); ++k)
+        {
+            EXPECT_EQ(v0[k], 0);
+        }
+
+        v0 = v1;
+        EXPECT_EQ(v0, v1);
+
+        {
+            V v;
+            EXPECT_FALSE(v.has_data());
+            EXPECT_FALSE(v.has_channel_axis());
+
+            v = v1;
+            EXPECT_TRUE(v.has_data());
+            EXPECT_EQ(v.shape(), v1.shape());
+            EXPECT_EQ(v.strides(), v1.strides());
+            EXPECT_EQ(v.raw_data(), v1.raw_data());
+            EXPECT_EQ(v.channel_axis(), 2);
+            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_FALSE(v.owns_memory());
+
+            // shape mismatch errors
+            EXPECT_THROW(v1 = v1.transpose(), std::runtime_error);
+            EXPECT_THROW(v1 += v1.transpose(), std::runtime_error);
+            EXPECT_THROW(v1 -= v1.transpose(), std::runtime_error);
+            EXPECT_THROW(v1 *= v1.transpose(), std::runtime_error);
+            EXPECT_THROW(v1 /= v1.transpose(), std::runtime_error);
+        }
+        {
+            V v;
+            A a(s);
+            v = a;
+            EXPECT_TRUE(v.has_data());
+            EXPECT_EQ(v.shape(), a.shape());
+            EXPECT_EQ(v.strides(), a.strides());
+            EXPECT_EQ(v.raw_data(), a.raw_data());
+            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_FALSE(v.owns_memory());
+        }
+        {
+            V v;
+            auto a = xt::xarray<T>::from_shape({4,3,2});
+            v = a;
+            EXPECT_TRUE(v.has_data());
+            EXPECT_EQ(v.shape(), shape_t<>(a.shape()));
+            EXPECT_EQ(v.strides(), shape_t<>(a.strides()));
+            EXPECT_EQ(v.raw_data(), a.raw_data());
+            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_FALSE(v.owns_memory());
+        }
+        {
+            V v;
+            auto a = xt::xarray<uint16_t>::from_shape({4,3,2});
+            EXPECT_THROW(v = a, std::runtime_error);       // incompatible pointer types
+            EXPECT_THROW(v = v1 + 1, std::runtime_error);  // unevaluated expression
+        }
     }
 
     TYPED_TEST(array_nd_test, bind)

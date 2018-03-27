@@ -73,15 +73,14 @@ namespace xt
     template <class T, xvigra::index_t N>
     struct xcontainer_inner_types<xvigra::view_nd<T, N>>
     {
-        using temporary_type = xvigra::view_nd<T, N>;
+        using temporary_type = xvigra::array_nd<T, N>;
     };
 
     template <class T, xvigra::index_t N>
     struct xiterable_inner_types<xvigra::view_nd<T, N>>
     {
         using inner_shape_type = xvigra::shape_t<N>;
-        using stepper = xindexed_stepper<xvigra::view_nd<T, N>, false>;
-        // using stepper = xindexed_stepper<xvigra::view_nd<T, N>, std::is_const<T>::value>;
+        using stepper = xindexed_stepper<xvigra::view_nd<T, N>, std::is_const<T>::value>;
         using const_stepper = xindexed_stepper<xvigra::view_nd<T, N>, true>;
     };
 }
@@ -287,20 +286,34 @@ namespace xvigra
             }
 
             template <class T, class... S>
-            std::enable_if_t<xt::has_raw_data_interface<std::decay_t<T>>::value, bool>
+            bool
             operator()(xt::xview<T, S...> const & v) const
             {
-                return check(&v(), &*v.crbegin());
+                if(xt::has_raw_data_interface<T>::value)  // FIXME
+                {
+                    return check(&v(), &*v.crbegin());
+                }
+                else
+                {
+                    return true; // always create a temporary for views over xexpressions
+                }
             }
 
-            template <class E, class S, class T>
-            std::enable_if_t<xt::has_raw_data_interface<std::decay_t<E>>::value, bool>
-            operator()(xt::xstrided_view<E, S, T> const & v) const
+            template <class T, class S, class U>
+            bool
+            operator()(xt::xstrided_view<T, S, U> const & v) const
             {
-                return check(&v(), &*v.crbegin());
+                if(xt::has_raw_data_interface<T>::value)  // FIXME
+                {
+                    return check(&v(), &*v.crbegin());
+                }
+                else
+                {
+                    return true; // always create a temporary for views over xexpressions
+                }
             }
 
-            // FIXME: implement overlapping_memory_checker for views over xexpressions
+            // FIXME: improve overlapping_memory_checker for views over xexpressions
         };
 
     }
@@ -393,6 +406,36 @@ namespace xvigra
             }
         }
 
+        template <class E, class P=pointer,
+                  class Q=std::remove_const_t<decltype(std::declval<E>().raw_data())>>
+        auto
+        assign_to_empty(E const & e)
+        -> std::enable_if_t<has_raw_data_api<E>::value && std::is_convertible<Q, P>::value>
+        {
+            shape_     = e.shape();
+            strides_   = e.strides();
+            axistags_  = axistags_type();
+            data_      = const_cast<pointer>(e.raw_data() + e.raw_data_offset());
+            flags_     = is_consecutive_impl() & ~owns_memory_flag;
+        }
+
+        template <class E, class P=pointer,
+                  class Q=std::remove_const_t<decltype(std::declval<E>().raw_data())>>
+        auto
+        assign_to_empty(E const & e)
+        -> std::enable_if_t<has_raw_data_api<E>::value && !std::is_convertible<Q, P>::value>
+        {
+            vigra_fail("view_nd::operator=(): raw data pointers are incompatible.");
+        }
+
+        template <class E>
+        auto
+        assign_to_empty(E const & e)
+        -> std::enable_if_t<!has_raw_data_api<E>::value>
+        {
+            vigra_fail("view_nd::operator=(): cannot assign an expression to an empty view.");
+        }
+
         shape_type shape_;
         shape_type strides_;
         axistags_type axistags_;
@@ -413,19 +456,19 @@ namespace xvigra
         {}
 
         view_nd(view_nd const & other)
-        : shape_(other.shape())
-        , strides_(other.strides())
-        , axistags_(other.axistags())
-        , data_(const_cast<pointer>(other.raw_data()))
-        , flags_(other.flags() & ~owns_memory_flag)
+        : shape_(other.shape_)
+        , strides_(other.strides_)
+        , axistags_(other.axistags_)
+        , data_(const_cast<pointer>(other.data_))
+        , flags_(other.flags_ & ~owns_memory_flag)
         {}
 
-        // view_nd(view_nd && other)
-        // : shape_(other.shape())
-        // , strides_(other.strides())
-        // , axistags_(other.axistags())
-        // , data_(const_cast<pointer>(other.raw_data()))
-        // , flags_(other.flags() & ~owns_memory_flag)
+        // view_nd(view_nd && other) // FIXME: has undesired side effects
+        // : shape_(std::move(other.shape_))
+        // , strides_(std::move(other.strides_))
+        // , axistags_(std::move(other.axistags_))
+        // , data_(const_cast<pointer>(other.data_))
+        // , flags_(other.flags_)
         // {}
 
         template <index_t M>
@@ -436,14 +479,9 @@ namespace xvigra
         , data_(const_cast<pointer>(other.raw_data()))
         , flags_(other.flags() & ~owns_memory_flag)
         {
-            // static_assert(CompatibleDimensions<M, N>::value,  // FIXME
-            //     "view_nd<N>(view_nd<M>): ndim mismatch.");
+            static_assert(N == runtime_size || M == runtime_size || M == N,
+                "view_nd<N>(view_nd<M>): dimension mismatch.");
         }
-
-        template <index_t M>
-        view_nd(shape_t<M> const & shape)
-        : shape_(shape)
-        {}
 
              /** construct from shape and pointer
              */
@@ -473,17 +511,6 @@ namespace xvigra
                   axistags_type(shape.size(), tags::axis_unknown), ptr)
         {}
 
-        //     /** Construct from shape, strides (offset of a sample to the
-        //         next, measured in units if `sizeof(T)`) for every dimension,
-        //         and pointer.
-        //      */
-        // view_nd(shape_type const & shape,
-        //         tags::byte_strides_proxy<N> const & strides,
-        //         const_pointer ptr)
-        // : view_nd(shape, strides,
-        //           axistags_type(shape.size(), tags::axis_unknown), ptr)
-        // {}
-
             /** Construct from shape, strides (offset of a sample to the
                 next, measured in units if `sizeof(T)`), axistags for every
                 dimension, and pointer.
@@ -503,32 +530,107 @@ namespace xvigra
             zero_singleton_strides();
         }
 
-        //     /** Construct from shape, byte strides (offset of a sample to the
-        //         next, measured in bytes), axistags for every dimension, and pointer.
-        //      */
-        // view_nd(shape_type const & shape,
-        //         tags::byte_strides_proxy<N> const & strides,
-        //         axistags_type const & axistags,
-        //         const_pointer ptr)
-        // : shape_(shape)
-        // , byte_strides_(strides.value)
-        // , axistags_(axistags)
-        // , data_((char*)ptr)
-        // , flags_(is_consecutive_impl())
-        // {
-        //     XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
-        //         "view_nd(): invalid shape.");
-        //     zero_singleton_strides();
-        // }
-
-        template <class E>
-        self_type& operator=(const xt::xexpression<E>& e)
+        view_nd & operator=(view_nd const & rhs)
         {
-            vigra_precondition(shape() == e.shape(),
-                "view_nd::operator=(): shape mismatch.");
-            return semantic_base::operator=(std::forward<E>(e));
+            if(this != &rhs)
+            {
+                if(!has_data())
+                {
+                    shape_     = rhs.shape_;
+                    strides_   = rhs.strides_;
+                    axistags_  = rhs.axistags_;
+                    data_      = rhs.data_;
+                    flags_     = rhs.flags_ & ~owns_memory_flag;
+                }
+                else
+                {
+                    vigra_precondition(shape() == rhs.shape(),
+                        "view_nd::operator=(): shape mismatch.");
+                    detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);
+                    if(m(rhs))
+                    {
+                        /* memory overlaps => we need a temporary */
+                        /* FIXME: use array_nd instread of xarray */
+                        return semantic_base::assign(xt::xarray<value_type>(rhs));
+                    }
+                    else
+                    {
+                        return semantic_base::assign(rhs);
+                    }
+                }
+            }
+            return *this;
         }
 
+        self_type& operator=(const_value_type & v)
+        {
+            vigra_precondition(has_data(),
+                "vigra_nd::operator=(): cannot assign a value to an empty array.");
+            return semantic_base::assign(xt::xscalar<const_value_type>(v));
+        }
+
+        template <class E,
+                  VIGRA_REQUIRE<(!std::is_convertible<std::decay_t<E>, value_type const &>::value)>>
+        self_type& operator=(const xt::xexpression<E>& ex)
+        {
+            E const & e = ex.derived_cast();
+            if(!has_data())
+            {
+                assign_to_empty(e);
+            }
+            else
+            {
+                vigra_precondition(shape() == shape_t<>(e.shape()), /* FIXME: broadcast e.shape() */
+                    "view_nd::operator=(): shape mismatch.");
+                detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);
+                if(m(e))
+                {
+                    /* memory overlaps => we need a temporary */
+                    /* FIXME: use array_nd instread of xarray */
+                    semantic_base::assign(xt::xarray<value_type>(e));
+                }
+                else
+                {
+                    semantic_base::assign(e);
+                }
+            }
+            return *this;
+        }
+
+#define XVIGRA_COMPUTED_ASSIGN(OP, FCT)                                                   \
+        self_type& operator OP(const_value_type & v)                                      \
+        {                                                                                 \
+            vigra_precondition(has_data(),                                                \
+                "vigra_nd::operator" #OP "(): cannot assign a value to an empty array."); \
+            return semantic_base::FCT(xt::xscalar<const_value_type>(v));                  \
+        }                                                                                 \
+                                                                                          \
+        template <class E>                                                                \
+        self_type& operator OP(const xt::xexpression<E>& ex)                              \
+        {                                                                                 \
+            E const & e = ex.derived_cast();                                              \
+            vigra_precondition(shape() == shape_t<>(e.shape()), /* FIXME: broadcast e.shape() */     \
+                "view_nd::operator" #OP "(): shape mismatch.");                           \
+            detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);      \
+            if(m(e))                                                                      \
+            {                                                                             \
+                /* memory overlaps => we need a temporary */                              \
+                /* FIXME: use array_nd instread of xarray */                              \
+                return semantic_base::FCT(xt::xarray<value_type>(e));                     \
+            }                                                                             \
+            else                                                                          \
+            {                                                                             \
+                return semantic_base::FCT(e);                                             \
+            }                                                                             \
+        }
+
+        XVIGRA_COMPUTED_ASSIGN(+=, plus_assign)
+        XVIGRA_COMPUTED_ASSIGN(-=, minus_assign)
+        XVIGRA_COMPUTED_ASSIGN(*=, multiplies_assign)
+        XVIGRA_COMPUTED_ASSIGN(/=, divides_assign)
+        XVIGRA_COMPUTED_ASSIGN(%=, modulus_assign)
+
+#undef XVIGRA_COMPUTED_ASSIGN
 
             // needed for operator==
         template <class It>
@@ -560,7 +662,7 @@ namespace xvigra
 
             // needed for semantic_base::assign(expr)
         template <class S>
-        bool broadcast_shape(S& s) const
+        bool broadcast_shape(S& s, bool=false) const
         {
             // FIXME: S here is svector
             return xt::broadcast_shape(shape(), s);
@@ -1403,6 +1505,30 @@ namespace xvigra
         {
             return channel_axis() != tags::axis_missing;
         }
+
+            /** Swap the data between two view_nd objects.
+
+                The shapes of the two array must match. Both array views
+                still point to the same memory as before, just the contents
+                are exchanged.
+            */
+        template <class U, index_t M>
+        void
+        swap_data(view_nd<U, M> rhs)
+        {
+            static_assert(M == N || M == runtime_size || N == runtime_size,
+                "view_nd::swap_data(): incompatible dimensions.");
+            vigra_precondition(shape() == rhs.shape(),
+                "view_nd::swap_data(): shape mismatch.");
+            using std::swap;
+            auto i = this->begin(),
+                 e = this->end();
+            auto k = rhs.begin();
+            for(; i != e; ++i, ++k)
+            {
+                swap(*i, *k);
+            }
+        }
     };
 
     template <class T, index_t N>
@@ -1527,6 +1653,16 @@ namespace xvigra
             this->data_  = &allocated_data_[0];
             this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
         }
+
+        // template <class E>
+        // array_nd(xt::xexpression<E> const & e)
+        // : view_type(e.derived_cast().shape(), 0)
+        // , allocated_data_(this->size())
+        // {
+        //     this->data_  = &allocated_data_[0];
+        //     this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+        //     // semantic_base::assign(e);
+        // }
 
         template <class E,
                   VIGRA_REQUIRE<is_xexpression<E>::value && !tensor_concept<E>::value>>
