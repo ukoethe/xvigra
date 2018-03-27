@@ -361,7 +361,7 @@ namespace xvigra
         EXPECT_THROW((v0.subarray(S{ -5,0,0 }, S{ 3,2,2 })), std::runtime_error);
     }
 
-    TYPED_TEST(array_nd_test, bind)
+    TYPED_TEST(array_nd_test, channel_axis)
     {
         using A = TypeParam;
         using T = typename A::value_type;
@@ -523,6 +523,55 @@ namespace xvigra
             EXPECT_EQ(dv.shape(), (shape_t<>{3}));
             EXPECT_EQ(xv, vv);
             EXPECT_EQ(xv, dv);
+        }
+    }
+
+    TYPED_TEST(array_nd_test, overlapping_memory)
+    {
+        using A = TypeParam;
+        using T = typename A::value_type;
+        using V = typename A::view_type;
+
+        auto a = xt::xarray<T>::from_shape({4,3,2});
+
+        std::vector<T> data1(prod(s));
+        std::iota(data1.begin(), data1.end(), 0);
+        V v1(s, &data1[0]);
+
+        {
+            detail::overlapping_memory_checker m(&v1(), &v1[v1.shape()-1]+1);
+            EXPECT_FALSE(m(V()));
+            EXPECT_TRUE(m(v1));
+            EXPECT_TRUE(m(v1+v1));
+            EXPECT_TRUE(m(v1+1));
+            EXPECT_FALSE(m(V()+1));
+            EXPECT_FALSE(m(a));
+            EXPECT_FALSE(m(a+1));
+            EXPECT_FALSE(m(xt::view(a, xt::ellipsis())));
+            xt::slice_vector sv;
+            sv.push_back(xt::ellipsis());
+            EXPECT_FALSE(m(xt::dynamic_view(a, sv)));
+        }
+        {
+            auto v2 = v1.bind(0, 0);
+            detail::overlapping_memory_checker m(&v2(), &v2[v2.shape()-1]+1);
+            EXPECT_FALSE(m(v1.bind(0,1)));
+            EXPECT_TRUE(m(v2));
+            EXPECT_TRUE(m(v1));
+            EXPECT_TRUE(m(v1+v1));
+            EXPECT_TRUE(m(v1+1));
+            EXPECT_FALSE(m(v1.bind(0,1)+1));
+        }
+        {
+            V v2(s, a.raw_data());
+            detail::overlapping_memory_checker m(&v2(), &v2[v2.shape()-1]+1);
+            EXPECT_TRUE(m(a));
+            EXPECT_TRUE(m(a+1));
+            EXPECT_TRUE(m(xt::view(a, xt::ellipsis())));
+            xt::slice_vector sv;
+            sv.push_back(xt::ellipsis());
+            EXPECT_TRUE(m(xt::dynamic_view(a, sv)));
+            EXPECT_FALSE(m(v1));
         }
     }
 

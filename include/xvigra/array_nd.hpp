@@ -217,6 +217,92 @@ namespace xvigra
             }
             return res;
         }
+
+        struct overlapping_memory_checker
+        {
+            char * begin, * end;
+
+            template <class T>
+            overlapping_memory_checker(T * b, T * e)
+            : begin((char*)(b <= e ? b : e))
+            , end((char*)(b <= e ? e : b))
+            {}
+
+                // note: last points to the last element _in_ the range
+            template <class T>
+            bool check(T * first, T * last) const
+            {
+                if(first <= last)
+                {
+                    return (char*)first < end && begin < (char*)(last+1);
+                }
+                else
+                {
+                    return (char*)(last-1) < end && begin < (char*)first;
+                }
+            }
+
+            template <class T>
+            bool check(T * first) const
+            {
+                return check(first, first);
+            }
+
+            template<std::size_t I = 0, class... T>
+            std::enable_if_t<(I == sizeof...(T)), bool>
+            check_tuple(std::tuple<T...> const &) const
+            {
+                return false;
+            }
+
+            template<std::size_t I = 0, class... T>
+            std::enable_if_t<(I < sizeof...(T)), bool>
+            check_tuple(std::tuple<T...> const & t) const
+            {
+                return (*this)(std::get<I>(t)) || check_tuple<I+1>(t);
+            }
+
+            template <class F, class R, class... CT>
+            bool operator()(xt::xfunction_base<F, R, CT ...> const & f) const
+            {
+                return check_tuple(f.arguments());
+            }
+
+            template <class T, index_t N>
+            bool operator()(view_nd<T, N> const & v) const
+            {
+                return check(&v(), &v[v.shape()-1]);
+            }
+
+            template <class T>
+            bool operator()(xt::xcontainer<T> const & v) const
+            {
+                return check(&v(), &*v.crbegin());
+            }
+
+            template <class T>
+            bool operator()(xt::xscalar<T> const & v) const
+            {
+                return check(&v());
+            }
+
+            template <class T, class... S>
+            std::enable_if_t<xt::has_raw_data_interface<std::decay_t<T>>::value, bool>
+            operator()(xt::xview<T, S...> const & v) const
+            {
+                return check(&v(), &*v.crbegin());
+            }
+
+            template <class E, class S, class T>
+            std::enable_if_t<xt::has_raw_data_interface<std::decay_t<E>>::value, bool>
+            operator()(xt::xstrided_view<E, S, T> const & v) const
+            {
+                return check(&v(), &*v.crbegin());
+            }
+
+            // FIXME: implement overlapping_memory_checker for views over xexpressions
+        };
+
     }
 
     /***********/
@@ -1047,7 +1133,8 @@ namespace xvigra
         auto
         view(S s, A ... a)
         {
-            constexpr index_t M = detail::slice_dimension_traits<N, S, A...>::value;
+            using traits = detail::slice_dimension_traits<N, S, A...>;
+            constexpr index_t M = traits::target_dimension;
             shape_type point(dimension(), 0);
             shape_t<> new_shape, new_strides;
             detail::parse_slices(point, new_shape, new_strides, shape(), strides(), s, a...);
@@ -1089,7 +1176,7 @@ namespace xvigra
             // get a const view with static slicing
         template <class S, class ... A,
                   VIGRA_REQUIRE<!std::is_base_of<slice_vector, S>::value>>
-        view_nd<const_value_type, detail::slice_dimension_traits<N, S, A...>::value>
+        view_nd<const_value_type, detail::slice_dimension_traits<N, S, A...>::target_dimension>
         view(S s, A ... a) const
         {
             return const_cast<self_type *>(this)->view(s, a...);

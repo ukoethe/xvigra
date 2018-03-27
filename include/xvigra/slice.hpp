@@ -346,13 +346,13 @@ namespace xvigra
         /**************************/
 
         template <class S, bool = std::is_integral<S>::value>
-        struct slice_dimension_traits_impl
+        struct slice_dimension_traits_integral
         {
             static constexpr index_t value = 0;
         };
 
         template <class S>
-        struct slice_dimension_traits_impl<S, false>
+        struct slice_dimension_traits_integral<S, false>
         {
             static constexpr index_t value = 1;
         };
@@ -363,39 +363,53 @@ namespace xvigra
         template <index_t M, class S, class ...A>
         struct slice_dimension_traits_base<M, S, A...>
         {
-            static constexpr index_t value = slice_dimension_traits_impl<S>::value +
-                                             slice_dimension_traits_base<M-1, A...>::value;
+            static constexpr index_t target_dimension = slice_dimension_traits_integral<S>::value +
+                                                        slice_dimension_traits_base<M-1, A...>::target_dimension;
+            static constexpr index_t slice_dimension  = 1 + slice_dimension_traits_base<M, A...>::slice_dimension;
         };
 
         template <index_t M, class ...A>
         struct slice_dimension_traits_base<M, xt::xellipsis_tag, A...>
         {
-            static constexpr index_t value = slice_dimension_traits_base<M, A...>::value;
+            static constexpr index_t target_dimension = slice_dimension_traits_base<M, A...>::target_dimension;
+            static constexpr index_t slice_dimension  = slice_dimension_traits_base<M, A...>::slice_dimension;
         };
 
         template <index_t M, class ...A>
         struct slice_dimension_traits_base<M, xt::xnewaxis_tag, A...>
         {
-            static constexpr index_t value = 1 + slice_dimension_traits_base<M, A...>::value;
+            static constexpr index_t target_dimension = 1 + slice_dimension_traits_base<M, A...>::target_dimension;
+            static constexpr index_t slice_dimension  = slice_dimension_traits_base<M, A...>::slice_dimension;
         };
 
         template <index_t M>
         struct slice_dimension_traits_base<M>
         {
-            static_assert(M >= 0, "slice has too many indices.");
-            static constexpr index_t value = M;
+            static constexpr index_t target_dimension = M;
+            static constexpr index_t slice_dimension  = 0;
         };
 
             // attempt to determine the dimension of the resulting view at compile time
         template <index_t N, class S, class ...A>
         struct slice_dimension_traits
         : public slice_dimension_traits_base<N, S, A...>
-        {};
+        {
+            static_assert(slice_dimension_traits_base<N, S, A...>::target_dimension >= 0,
+                "slice has too many indices.");
+        };
 
         template <class S, class ...A>
         struct slice_dimension_traits<runtime_size, S, A...>
+        : public slice_dimension_traits_base<runtime_size, S, A...>
         {
-            static constexpr index_t value = runtime_size;
+            static constexpr index_t target_dimension = runtime_size;
+        };
+
+        template <>
+        struct slice_dimension_traits<runtime_size, slice_vector>
+        {
+            static constexpr index_t target_dimension = runtime_size;
+            static constexpr index_t slice_dimension  = runtime_size;
         };
 
         /*******************/
@@ -613,7 +627,7 @@ namespace xvigra
         {
             bool has_ellipsis = false;
             index_t c = slice_dimension(has_ellipsis, a...),
-                    ellipsis_size = has_ellipsis ? point.size() - c : 0;
+                    ellipsis_size = point.size() - c;
             vigra_precondition(c <= (index_t)point.size(),
                 "slice has too many indices.");
 
@@ -627,7 +641,7 @@ namespace xvigra
         {
             bool has_ellipsis = false;
             index_t c = slice_dimension(has_ellipsis, s),
-                    ellipsis_size = has_ellipsis ? point.size() - c : 0,
+                    ellipsis_size = point.size() - c,
                     axis = 0;
             vigra_precondition(c <= (index_t)point.size(),
                 "slice has too many indices.");
@@ -642,6 +656,45 @@ namespace xvigra
                                          slicing::all());
             }
         }
+
+        // template <index_t N, class ... SLICES>
+        // struct slice_parser
+        // {
+        //     // N is source_dimension or runtime_size
+        //     using traits = slice_dimension_traits<N, SLICES...>;
+        //     static constexpr index_t M = traits::target_dimension;
+        //     static constexpr index_t S = traits::slice_dimension;
+
+        //     index_t source_axis, target_axis;
+        //     shape_t<N> point;
+        //     shape_t<target_dimension> new_shape, new_strides;
+
+        //     slice_parser(shape_t<N> const & old_shape, shape_t<N> const & old_strides,
+        //                  SLICES ... s)
+        //     : source_axis(0)
+        //     , target_axis(0)
+        //     , point(old_shape.size(), 0)
+        //     , new_shape(target_dimension(s), 0)
+        //     , new_strides(new_shape.size(), 0)
+        //     {
+        //         parse(old_shape, old_strides, s...);
+        //     }
+
+        //     template <class K=M,
+        //               VIGRA_REQUIRE<(K != runtime_size)>>
+        //     static constexpr index_t target_dimension(SLICES ...)
+        //     {
+        //         return M;
+        //     }
+
+        //     template <class K=M,
+        //               VIGRA_REQUIRE<(K == runtime_size)>>
+        //     static constexpr index_t target_dimension(SLICES ...s)
+        //     {
+        //         return M;
+        //     }
+        // };
+
     } // namespace detail
 
 } // namespace xvigra
