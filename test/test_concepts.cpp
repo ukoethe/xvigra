@@ -36,7 +36,7 @@
 #include <vector>
 #include <type_traits>
 
-namespace xvigra 
+namespace xvigra
 {
     std::int8_t test(...);
 
@@ -69,7 +69,17 @@ namespace xvigra
 
         EXPECT_TRUE(tensor_concept<xt::xarray<double>>::value);
         EXPECT_TRUE((tensor_concept<xt::xtensor<double,2>>::value));
+        EXPECT_TRUE((tensor_concept<xt::xarray_adaptor<xt::xarray<double>,
+                                        xt::layout_type::dynamic, xt::dynamic_shape<std::size_t>>>::value));
+        EXPECT_TRUE((tensor_concept<xt::xtensor_adaptor<xt::xtensor<double, 2>, 1, xt::layout_type::dynamic>>::value));
         EXPECT_FALSE(tensor_concept<std::vector<double>>::value);
+
+        EXPECT_TRUE(has_raw_data_api<xt::xarray<double>>::value);
+        EXPECT_TRUE((has_raw_data_api<xt::xtensor<double,2>>::value));
+        EXPECT_TRUE((has_raw_data_api<xt::xarray_adaptor<xt::xarray<double>,
+                                        xt::layout_type::dynamic, xt::dynamic_shape<std::size_t>>>::value));
+        EXPECT_TRUE((has_raw_data_api<xt::xtensor_adaptor<xt::xtensor<double, 2>, 1, xt::layout_type::dynamic>>::value));
+        EXPECT_FALSE(has_raw_data_api<std::vector<double>>::value);
 
         EXPECT_TRUE(input_iterator_concept<int *>::value);
         EXPECT_FALSE(output_iterator_concept<int *>::value);

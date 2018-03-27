@@ -81,7 +81,7 @@ namespace xvigra
     {
         template <class T>
         struct tensor_concept
-        : public std::false_type
+        : public std::is_base_of<xt::xcontainer<T>, T>
         {};
 
         template <class T, index_t N>
@@ -94,34 +94,54 @@ namespace xvigra
         : public std::true_type
         {};
 
-        template <class T, xt::layout_type L, class A, class SA>
-        struct tensor_concept<xt::xarray<T, L, A, SA>>
-        : public std::true_type
-        {};
-
-        template <class EC, xt::layout_type L, class SC, class Tag>
-        struct tensor_concept<xt::xarray_adaptor<EC, L, SC, Tag>>
-        : public std::true_type
-        {};
-
-        template <class T, std::size_t N, xt::layout_type L, class A>
-        struct tensor_concept<xt::xtensor<T, N, L, A>>
-        : public std::true_type
-        {};
-
-        template <class EC, std::size_t N, xt::layout_type L, class Tag>
-        struct tensor_concept<xt::xtensor_adaptor<EC, N, L, Tag>>
-        : public std::true_type
-        {};
-
         template <class CT, class... S>
         struct tensor_concept<xt::xview<CT, S...>>
+        : public std::true_type
+        {};
+
+        template <class T, class S, class D>
+        struct tensor_concept<xt::xstrided_view<T, S, D>>
         : public std::true_type
         {};
     }
 
     template <class T>
     using tensor_concept = detail::tensor_concept<std::decay_t<T>>;
+
+    /****************/
+    /* has_raw_data */
+    /****************/
+
+    namespace detail
+    {
+        template <class T>
+        struct has_raw_data_api
+        : public std::is_base_of<xt::xcontainer<T>, T>
+        {};
+
+        template <class T, index_t N>
+        struct has_raw_data_api<view_nd<T, N>>
+        : public std::true_type
+        {};
+
+        template <class T, index_t N, class A>
+        struct has_raw_data_api<array_nd<T, N, A>>
+        : public std::true_type
+        {};
+
+        template <class T, class... S>
+        struct has_raw_data_api<xt::xview<T, S...>>
+        : public has_raw_data_api<T>
+        {};
+
+        template <class T, class S, class D>
+        struct has_raw_data_api<xt::xstrided_view<T, S, D>>
+        : public has_raw_data_api<T>
+        {};
+    }
+
+    template <class T>
+    using has_raw_data_api = detail::has_raw_data_api<std::decay_t<T>>;
 
     /***********************/
     /* tiny_vector_concept */
@@ -151,7 +171,7 @@ namespace xvigra
             template <class U>
             static typename U::iterator_category test(U *);
 
-            using type = decltype(test((std::iterator_traits<T> *)0));
+            using type = decltype(test((std::iterator_traits<std::decay_t<T>> *)0));
         };
 
         template <class T, class Category>
