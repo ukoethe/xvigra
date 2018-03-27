@@ -580,7 +580,8 @@ namespace xvigra
             }
             else
             {
-                vigra_precondition(shape() == shape_t<>(e.shape()), /* FIXME: broadcast e.shape() */
+                auto s = e.shape();
+                vigra_precondition(broadcast_shape(s),
                     "view_nd::operator=(): shape mismatch.");
                 detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);
                 if(m(e))
@@ -597,11 +598,11 @@ namespace xvigra
             return *this;
         }
 
-#define XVIGRA_COMPUTED_ASSIGN(OP, FCT)                                                   \
+#define XVIGRA_COMPUTED_ASSIGNMENT(OP, FCT)                                                   \
         self_type& operator OP(const_value_type & v)                                      \
         {                                                                                 \
             vigra_precondition(has_data(),                                                \
-                "vigra_nd::operator" #OP "(): cannot assign a value to an empty array."); \
+                "vigra_nd::operator" #OP "(): cannot assign a value to an empty view.");  \
             return semantic_base::FCT(xt::xscalar<const_value_type>(v));                  \
         }                                                                                 \
                                                                                           \
@@ -609,7 +610,8 @@ namespace xvigra
         self_type& operator OP(const xt::xexpression<E>& ex)                              \
         {                                                                                 \
             E const & e = ex.derived_cast();                                              \
-            vigra_precondition(shape() == shape_t<>(e.shape()), /* FIXME: broadcast e.shape() */     \
+            auto s = e.shape();                                                           \
+            vigra_precondition(broadcast_shape(s),                                        \
                 "view_nd::operator" #OP "(): shape mismatch.");                           \
             detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);      \
             if(m(e))                                                                      \
@@ -624,13 +626,13 @@ namespace xvigra
             }                                                                             \
         }
 
-        XVIGRA_COMPUTED_ASSIGN(+=, plus_assign)
-        XVIGRA_COMPUTED_ASSIGN(-=, minus_assign)
-        XVIGRA_COMPUTED_ASSIGN(*=, multiplies_assign)
-        XVIGRA_COMPUTED_ASSIGN(/=, divides_assign)
-        XVIGRA_COMPUTED_ASSIGN(%=, modulus_assign)
+        XVIGRA_COMPUTED_ASSIGNMENT(+=, plus_assign)
+        XVIGRA_COMPUTED_ASSIGNMENT(-=, minus_assign)
+        XVIGRA_COMPUTED_ASSIGNMENT(*=, multiplies_assign)
+        XVIGRA_COMPUTED_ASSIGNMENT(/=, divides_assign)
+        XVIGRA_COMPUTED_ASSIGNMENT(%=, modulus_assign)
 
-#undef XVIGRA_COMPUTED_ASSIGN
+#undef XVIGRA_COMPUTED_ASSIGNMENT
 
             // needed for operator==
         template <class It>
