@@ -35,6 +35,7 @@
 #include <numeric>
 #include "unittest.hpp"
 #include <xtensor/xeval.hpp>
+#include <xtensor/xinfo.hpp>
 #include <xvigra/array_nd.hpp>
 // #include <vigra2/gaussians.hxx>
 
@@ -43,14 +44,16 @@ namespace xvigra
     constexpr index_t ndim = 3;
     shape_t<> s{4, 3, 2};
 
+#if 1
     using array_nd_types = testing::Types<array_nd<uint8_t, ndim>,
                                           array_nd<int, ndim>,
                                           array_nd<int>,
                                           array_nd<float, ndim>
                                          >;
-
-    // using array_nd_types = testing::Types<array_nd<int, ndim>
-    //                                      >;
+#else
+    using array_nd_types = testing::Types<array_nd<int, ndim>
+                                         >;
+#endif
 
     TYPED_TEST_SETUP(array_nd_test, array_nd_types);
 
@@ -260,7 +263,7 @@ namespace xvigra
             EXPECT_EQ(v0[k], 2);
         }
 
-        v0 = 1;
+        v0 = xt::xscalar<T>(1);
         for (int k = 0; k < v0.size(); ++k)
         {
             EXPECT_EQ(v0[k], 1);
@@ -333,6 +336,7 @@ namespace xvigra
 
             // shape mismatch errors
             EXPECT_THROW(v1 = v1.transpose(), std::runtime_error);
+            EXPECT_THROW(v1 = xt::view(v1.transpose(), xt::all()), std::runtime_error);
             EXPECT_THROW(v1 += v1.transpose(), std::runtime_error);
             EXPECT_THROW(v1 -= v1.transpose(), std::runtime_error);
             EXPECT_THROW(v1 *= v1.transpose(), std::runtime_error);

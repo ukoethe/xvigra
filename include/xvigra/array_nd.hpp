@@ -289,7 +289,7 @@ namespace xvigra
             bool
             operator()(xt::xview<T, S...> const & v) const
             {
-                if(xt::has_raw_data_interface<T>::value)  // FIXME
+                if(has_raw_data_api<xt::xview<T, S...>>::value)
                 {
                     return check(&v(), &*v.crbegin());
                 }
@@ -303,7 +303,7 @@ namespace xvigra
             bool
             operator()(xt::xstrided_view<T, S, U> const & v) const
             {
-                if(xt::has_raw_data_interface<T>::value)  // FIXME
+                if(has_raw_data_api<xt::xstrided_view<T, S, U>>::value)
                 {
                     return check(&v(), &*v.crbegin());
                 }
@@ -315,7 +315,6 @@ namespace xvigra
 
             // FIXME: improve overlapping_memory_checker for views over xexpressions
         };
-
     }
 
     /***********/
@@ -409,7 +408,7 @@ namespace xvigra
         template <class E, class P=pointer,
                   class Q=std::remove_const_t<decltype(std::declval<E>().raw_data())>>
         auto
-        assign_to_empty(E const & e)
+        create_view(E const & e)
         -> std::enable_if_t<has_raw_data_api<E>::value && std::is_convertible<Q, P>::value>
         {
             shape_     = e.shape();
@@ -422,7 +421,7 @@ namespace xvigra
         template <class E, class P=pointer,
                   class Q=std::remove_const_t<decltype(std::declval<E>().raw_data())>>
         auto
-        assign_to_empty(E const & e)
+        create_view(E const & e)
         -> std::enable_if_t<has_raw_data_api<E>::value && !std::is_convertible<Q, P>::value>
         {
             vigra_fail("view_nd::operator=(): raw data pointers are incompatible.");
@@ -430,10 +429,28 @@ namespace xvigra
 
         template <class E>
         auto
-        assign_to_empty(E const & e)
+        create_view(E const & e)
         -> std::enable_if_t<!has_raw_data_api<E>::value>
         {
             vigra_fail("view_nd::operator=(): cannot assign an expression to an empty view.");
+        }
+
+        template <class S>
+        bool can_broadcast_rhs(S const & s) const
+        {
+            index_t diff = shape_.size() - s.size();
+            if(diff < 0)
+            {
+                return false;
+            }
+            for(index_t k=s.size()-1; k>=0; --k)
+            {
+                if(s[k] != 1 && (index_t)s[k] != shape_[diff+k])
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         shape_type shape_;
@@ -544,8 +561,8 @@ namespace xvigra
                 }
                 else
                 {
-                    vigra_precondition(shape() == rhs.shape(),
-                        "view_nd::operator=(): shape mismatch.");
+                    vigra_precondition(can_broadcast_rhs(rhs.shape()),
+                        "view_nd::operator=(): RHS shape cannot be broadcast to LHS shape.");
                     detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);
                     if(m(rhs))
                     {
@@ -566,7 +583,15 @@ namespace xvigra
         {
             vigra_precondition(has_data(),
                 "vigra_nd::operator=(): cannot assign a value to an empty array.");
-            return semantic_base::assign(xt::xscalar<const_value_type>(v));
+            if(is_consecutive())
+            {
+                std::fill(data_, data_+size(), v);
+            }
+            else
+            {
+                semantic_base::assign(xt::xscalar<const_value_type>(v));
+            }
+            return *this;
         }
 
         template <class E,
@@ -576,54 +601,54 @@ namespace xvigra
             E const & e = ex.derived_cast();
             if(!has_data())
             {
-                assign_to_empty(e);
+                create_view(e); // FIXME: should be simplified using `if constexpr`
             }
             else
             {
-                auto s = e.shape();
-                vigra_precondition(broadcast_shape(s),
-                    "view_nd::operator=(): shape mismatch.");
+                vigra_precondition(can_broadcast_rhs(e.shape()),
+                    "view_nd::operator=(): RHS shape cannot be broadcast to LHS shape.");
                 detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);
                 if(m(e))
                 {
                     /* memory overlaps => we need a temporary */
-                    /* FIXME: use array_nd instread of xarray */
-                    semantic_base::assign(xt::xarray<value_type>(e));
+                    /* FIXME: use array_nd instread of xarray? */
+                    semantic_base::assign_xexpression(xt::xarray<value_type>(e));
+                    // semantic_base::assign(xt::xarray<value_type>(e));
                 }
                 else
                 {
-                    semantic_base::assign(e);
+                    semantic_base::assign_xexpression(e);
+                    // semantic_base::assign(e);
                 }
             }
             return *this;
         }
 
-#define XVIGRA_COMPUTED_ASSIGNMENT(OP, FCT)                                                   \
-        self_type& operator OP(const_value_type & v)                                      \
-        {                                                                                 \
-            vigra_precondition(has_data(),                                                \
-                "vigra_nd::operator" #OP "(): cannot assign a value to an empty view.");  \
-            return semantic_base::FCT(xt::xscalar<const_value_type>(v));                  \
-        }                                                                                 \
-                                                                                          \
-        template <class E>                                                                \
-        self_type& operator OP(const xt::xexpression<E>& ex)                              \
-        {                                                                                 \
-            E const & e = ex.derived_cast();                                              \
-            auto s = e.shape();                                                           \
-            vigra_precondition(broadcast_shape(s),                                        \
-                "view_nd::operator" #OP "(): shape mismatch.");                           \
-            detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);      \
-            if(m(e))                                                                      \
-            {                                                                             \
-                /* memory overlaps => we need a temporary */                              \
-                /* FIXME: use array_nd instread of xarray */                              \
-                return semantic_base::FCT(xt::xarray<value_type>(e));                     \
-            }                                                                             \
-            else                                                                          \
-            {                                                                             \
-                return semantic_base::FCT(e);                                             \
-            }                                                                             \
+#define XVIGRA_COMPUTED_ASSIGNMENT(OP, FCT)                                                  \
+        self_type& operator OP(const_value_type & v)                                         \
+        {                                                                                    \
+            vigra_precondition(has_data(),                                                   \
+                "vigra_nd::operator" #OP "(): cannot assign a value to an empty view.");     \
+            return semantic_base::FCT(xt::xscalar<const_value_type>(v));                     \
+        }                                                                                    \
+                                                                                             \
+        template <class E>                                                                   \
+        self_type& operator OP(const xt::xexpression<E>& ex)                                 \
+        {                                                                                    \
+            E const & e = ex.derived_cast();                                                 \
+            vigra_precondition(can_broadcast_rhs(e.shape()),                               \
+                "view_nd::operator" #OP "(): RHS shape cannot be broadcast to LHS shape.");  \
+            detail::overlapping_memory_checker m(&(*this)(), &(*this)[shape()-1]+1);         \
+            if(m(e))                                                                         \
+            {                                                                                \
+                /* memory overlaps => we need a temporary */                                 \
+                /* FIXME: use array_nd instread of xarray */                                 \
+                return semantic_base::FCT(xt::xarray<value_type>(e));                        \
+            }                                                                                \
+            else                                                                             \
+            {                                                                                \
+                return semantic_base::FCT(e);                                                \
+            }                                                                                \
         }
 
         XVIGRA_COMPUTED_ASSIGNMENT(+=, plus_assign)
