@@ -108,9 +108,9 @@ namespace xvigra
     template <class T>
     using tensor_concept = detail::tensor_concept<std::decay_t<T>>;
 
-    /****************/
-    /* has_raw_data */
-    /****************/
+    /********************/
+    /* has_raw_data_api */
+    /********************/
 
     namespace detail
     {
@@ -131,12 +131,12 @@ namespace xvigra
 
         template <class T, class... S>
         struct has_raw_data_api<xt::xview<T, S...>>
-        : public has_raw_data_api<T>
+        : public has_raw_data_api<typename xt::xview<T, S...>::xexpression_type>
         {};
 
         template <class T, class S, class D>
         struct has_raw_data_api<xt::xstrided_view<T, S, D>>
-        : public has_raw_data_api<T>
+        : public has_raw_data_api<typename xt::xstrided_view<T, S, D>::xexpression_type>
         {};
     }
 
