@@ -69,7 +69,7 @@ namespace xvigra
     template <class T, index_t N=runtime_size>
     class view_nd;
 
-    template <class T, index_t N=runtime_size, class A=XVIGRA_DEFAULT_ALLOCATOR(T)>
+    template <class T, index_t N=runtime_size, class A=XVIGRA_DEFAULT_ALLOCATOR(std::decay_t<T>)>
     class array_nd;
 
     /***********/

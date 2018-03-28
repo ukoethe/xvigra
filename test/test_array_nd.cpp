@@ -87,18 +87,20 @@ namespace xvigra
         std::vector<T> data0(prod(s), 0), data1(prod(s));
         std::iota(data1.begin(), data1.end(), 0);
 
-        V v0;
+        V v;
 
-        EXPECT_EQ(v0.shape(), S());
-        EXPECT_EQ(v0.strides(), S());
-        EXPECT_EQ(v0.raw_data(), (T*)0);
-        EXPECT_FALSE(v0.has_data());
+        EXPECT_EQ(v.shape(), S());
+        EXPECT_EQ(v.strides(), S());
+        EXPECT_EQ(v.raw_data(), (T*)0);
+        EXPECT_FALSE(v.has_data());
 
+        V v0(s, &data0[0], c_order);
         V v1(s, &data1[0], c_order);
 
         EXPECT_EQ(v1.shape(), s);
+        EXPECT_EQ(v1.shape(1), s[1]);
         EXPECT_EQ(v1.strides(), (S{ 6,2,1 }));
-        // EXPECT_EQ(v1.byte_strides(), (S{ 6,2,1 }*sizeof(T)));
+        EXPECT_EQ(v1.strides(1), 2);
         EXPECT_EQ(v1.raw_data(), &data1[0]);
         EXPECT_TRUE(v1.has_data());
         EXPECT_TRUE(v1.is_consecutive());
@@ -108,8 +110,8 @@ namespace xvigra
 
         EXPECT_TRUE(v1 == v1);
         EXPECT_FALSE(v1 != v1);
-        EXPECT_TRUE(v1 != v0);
-        EXPECT_FALSE(v1 == v0);
+        EXPECT_TRUE(v1 != v);
+        EXPECT_FALSE(v1 == v);
 
         EXPECT_TRUE(any(v1));
         EXPECT_FALSE(all(v1));
@@ -220,15 +222,46 @@ namespace xvigra
         EXPECT_TRUE(a5 == v3);
         EXPECT_EQ(d, a5.raw_data());
 
-        // Array1D a6{ 0,1,2,3 };
-        // EXPECT_EQ(a6.ndim(), 1);
-        // EXPECT_EQ(a6.size(), 4);
-        // for (int k = 0; k < 4; ++k)
-        //     EXPECT_EQ(a6(k), k);
+        A a6(s, data1.begin(), data1.end());
+        EXPECT_EQ(a6.shape(), s);
+        EXPECT_EQ(a6, v1);
 
-        // A a7(s, { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 });
-        // EXPECT_EQ(a7.shape(), s);
-        // EXPECT_TRUE(a7 == v1);
+        a6 += v1;
+        a6 /= 2;
+        EXPECT_EQ(a6, v1);
+
+        A a7{{{ 0,  1},
+              { 2,  3},
+              { 4,  5}},
+             {{ 6,  7},
+              { 8,  9},
+              {10, 11}},
+             {{12, 13},
+              {14, 15},
+              {16, 17}},
+             {{18, 19},
+              {20, 21},
+              {22, 23}}};
+        EXPECT_EQ(a7.shape(), s);
+        EXPECT_EQ(a7, v1);
+
+        A a8(v0);
+        EXPECT_EQ(a8, v0);
+        swap(a7, a8);
+        EXPECT_EQ(a7, v0);
+        EXPECT_EQ(a8, v1);
+
+        T * data = a8.raw_data();
+        A a9(std::move(a8));
+        EXPECT_EQ(a9.raw_data(), data);
+        EXPECT_EQ(a9, v1);
+        EXPECT_FALSE(a8.has_data());
+        EXPECT_EQ(a8.raw_data(), nullptr);
+        EXPECT_EQ(a8.size(), 0);
+
+        swap(v0, v1);
+        EXPECT_EQ(v1, a7);
+        EXPECT_EQ(v0, a9);
     }
 
     TYPED_TEST(array_nd_test, assignment)
@@ -304,7 +337,7 @@ namespace xvigra
         v0 -= v1;
         EXPECT_EQ(v0, v1);
 
-        v0 += 1;
+        v0 += xt::xscalar<T>(1);
         v0 /= v0;
         for (int k = 0; k < v0.size(); ++k)
         {
@@ -369,6 +402,53 @@ namespace xvigra
             auto a = xt::xarray<uint16_t>::from_shape({4,3,2});
             EXPECT_THROW(v = a, std::runtime_error);       // incompatible pointer types
             EXPECT_THROW(v = v1 + 1, std::runtime_error);  // unevaluated expression
+        }
+
+        {
+            A a0(s, 0),
+              a1(v1);
+
+            T * data = a1.raw_data();
+            EXPECT_EQ(a1, v1);
+            // assignment only copies data, because shapes are equal
+            a1 = a0;
+            EXPECT_EQ(a1.raw_data(), data);
+            EXPECT_EQ(a1, a0);
+
+            // assignment resizes, because shapes differ
+            a1 = v1.transpose();
+            EXPECT_NE(a1.raw_data(), data);
+            EXPECT_EQ(a1.shape(), reversed(s));
+            EXPECT_EQ(a1, v1.transpose());
+
+            a1 = 1;
+            EXPECT_EQ(a1.reshape(s), a0.view()+1); // FIXME: a0+1 doesn't compile
+
+            data = a0.raw_data();
+            EXPECT_NE(a1.raw_data(), data);
+            EXPECT_NE(a1.shape(), a0.shape());
+
+            // move assignment actually moves, because shapes differ
+            a1 = std::move(a0);
+            EXPECT_FALSE(a0.has_data());
+            EXPECT_EQ(a0.size(), 0);
+            EXPECT_EQ(a0.raw_data(), nullptr);
+            EXPECT_EQ(a1.raw_data(), data);
+            EXPECT_TRUE(all(equal(a1.view(), 0))); // FIXME
+
+            A a2(a1);
+            EXPECT_NE(a1.raw_data(), a2.raw_data());
+            EXPECT_EQ(a1, a2);
+
+            a2 += xt::xscalar<T>(1);
+            EXPECT_EQ(a1.view()+1, a2);
+
+            // move assignment only copies data, because shapes are equal
+            data = a1.raw_data();
+            a1 = std::move(a2);
+            EXPECT_EQ(a1.raw_data(), data);
+            EXPECT_NE(a1.raw_data(), a2.raw_data());
+            EXPECT_EQ(a1, a2);
         }
     }
 
