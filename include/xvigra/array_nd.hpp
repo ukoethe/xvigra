@@ -866,7 +866,7 @@ namespace xvigra
                 \endcode
              */
         view_nd<T, ((N < 0) ? runtime_size : N-1)>
-        bind(int axis, index_t index) const
+        bind(int axis, index_t index=0) const
         {
             using view_t = view_nd<T, ((N < 0) ? runtime_size : N-1)>;
 
@@ -905,6 +905,13 @@ namespace xvigra
                 "view_nd::bind(shape_t<M>): M <= N required.");
             return bind(axes.back(), indices.back())
                       .bind(axes.pop_back(), indices.pop_back());
+        }
+
+        template <index_t M>
+        decltype(auto)
+        bind(shape_t<M> const & axes) const
+        {
+            return bind(axes, shape_t<M>(axes.size(), 0));
         }
 
         decltype(auto)

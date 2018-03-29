@@ -505,6 +505,7 @@ namespace xvigra
         EXPECT_FALSE(v3.has_channel_axis());
         EXPECT_EQ(v3.axistags(), (axis_tags<>{ tags::axis_y, tags::axis_x }));
         EXPECT_FALSE(v3.is_contiguous());
+        EXPECT_EQ(v3, v0.bind(2));
 
         count = 0;
         for (int i = 0; i < s[0]; ++i)
@@ -519,6 +520,14 @@ namespace xvigra
         EXPECT_FALSE(v4.has_channel_axis());
         EXPECT_EQ(v4.axistags(), (axis_tags<>{ tags::axis_unknown }));
         EXPECT_TRUE(v4.is_contiguous());
+        EXPECT_EQ(v4, v0.bind(shape_t<3>{0,1,2}, shape_t<3>{3,2,1}));
+        EXPECT_EQ(v4, v0.subarray(shape_t<3>{3,2,1}, shape_t<3>(s)).bind(shape_t<3>{0,1,2}));
+
+        auto v4a = v0.bind(shape_t<>{0,1,2}, shape_t<>{3,2,1});
+        EXPECT_EQ(v4a.shape(), shape_t<>{1});
+        EXPECT_EQ(v4a[{0}], (v0[{3, 2, 1}]));
+        EXPECT_TRUE(v4a.is_contiguous());
+        EXPECT_EQ(v4a, v0.subarray(shape_t<3>{3,2,1}, shape_t<3>(s)).bind(shape_t<>{0,1,2}));
 
         auto v5 = v0.bind_left(shape_t<2>{3, 2});
         EXPECT_EQ(v5.shape(), shape_t<1>{2});
