@@ -725,13 +725,15 @@ namespace xvigra
                  axis_tags<M> new_axistags = axis_tags<M>{},
                  tags::memory_order order = c_order) const
         {
-            view_nd<T, M> res(shape_, strides_, axistags_, data_);
-            res.reshape(new_shape, order);
+            vigra_precondition(is_consecutive(),
+                "view_nd::reshaped(): only consecutive arrays can be reshaped.");
+            vigra_precondition(prod(new_shape) == size(),
+                "view_nd::reshaped(): size mismatch between old and new shape.");
             if(new_axistags.size() != new_shape.size())
             {
-                res.set_axistags(new_axistags);
+                new_axistags = axis_tags<M>(new_shape.size(), tags::axis_unknown);
             }
-            return res;
+            return view_nd<T, M>(new_shape, new_axistags, data_, order);
         }
 
         decltype(auto)
