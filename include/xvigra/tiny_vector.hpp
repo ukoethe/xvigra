@@ -119,12 +119,7 @@ namespace xvigra
         template <class U, index_t M, class R>
         tiny_vector & operator=(tiny_vector<U, M, R> const & rhs);
 
-        void resize(std::size_t s)
-        {
-            vigra_precondition(s == this->size(),
-                "tiny_vector::resize(): size mismatch.");
-        }
-
+        using base_type::resize;
         using base_type::assign;
 
         void assign(std::initializer_list<value_type> v);
@@ -376,6 +371,7 @@ namespace xvigra
         tiny_vector_impl & operator=(tiny_vector_impl const & v);
         tiny_vector_impl & operator=(tiny_vector_impl && v);
 
+        void resize(std::size_t s);
         void assign(size_type n, const value_type& v);
 
         template <class IT,
@@ -516,6 +512,7 @@ namespace xvigra
 
         void reset(representation_type const & begin);
 
+        void resize(std::size_t s);
         void assign(size_type n, const value_type& v);
 
         template <class IT,
@@ -595,6 +592,7 @@ namespace xvigra
 
         void reset(representation_type const & begin, representation_type const & end);
 
+        void resize(std::size_t s);
         void assign(size_type n, const value_type& v);
 
         template <class IT,
@@ -659,6 +657,7 @@ namespace xvigra
 
         using base_type::base_type;
 
+        void resize(std::size_t s);
         void assign(size_type n, const value_type& v);
 
         template <class IT,
@@ -1824,6 +1823,14 @@ namespace xvigra
     }
 
     template <class V, index_t N>
+    inline void
+    tiny_vector_impl<V, N, std::array<V, (size_t)N>>::resize(std::size_t s)
+    {
+        vigra_precondition(s == this->size(),
+            "tiny_vector::resize(): size mismatch.");
+    }
+
+    template <class V, index_t N>
     template <class IT, class>
     inline void
     tiny_vector_impl<V, N, std::array<V, (size_t)N>>::assign(IT begin, IT end)
@@ -1844,9 +1851,9 @@ namespace xvigra
         return N;
     }
 
-    /**********************************************/
+    /****************************************************/
     /* tiny_vector_impl fixed shape view implementation */
-    /**********************************************/
+    /****************************************************/
 
     template <class V, index_t N, class R>
     inline
@@ -1888,6 +1895,14 @@ namespace xvigra
     tiny_vector_impl<V, N, R>::reset(representation_type const & begin)
     {
         m_data = begin;
+    }
+
+    template <class V, index_t N, class R>
+    inline void
+    tiny_vector_impl<V, N, R>::resize(std::size_t s)
+    {
+        vigra_precondition(s == this->size(),
+            "tiny_vector::resize(): size mismatch.");
     }
 
     template <class V, index_t N, class R>
@@ -2036,6 +2051,14 @@ namespace xvigra
     {
         m_size = static_cast<size_type>(std::distance(begin, end));
         m_data = begin;
+    }
+
+    template <class V, class R>
+    inline void
+    tiny_vector_impl<V, runtime_size, R>::resize(std::size_t s)
+    {
+        vigra_precondition(s == this->size(),
+            "tiny_vector::resize(): size mismatch.");
     }
 
     template <class V, class R>
