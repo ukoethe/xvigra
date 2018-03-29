@@ -42,10 +42,15 @@ OPTION(BUILD_BENCHMARK "build xvigra benchmark" OFF)
 ################
 
 set(XVIGRA_EXTERNALS_PATH "${PROJECT_SOURCE_DIR}/externals" CACHE PATH "path to download external dependencies")
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${PROJECT_SOURCE_DIR}/cmake")
 
 find_package(xtl REQUIRED)
 find_package(xtensor REQUIRED)
 target_link_libraries(xvigra INTERFACE xtl xtensor)
+
+find_package(OIIO REQUIRED)
+target_include_directories(xvigra INTERFACE "${OIIO_INCLUDE_DIRS}")
+target_link_libraries(xvigra INTERFACE "${OIIO_LIBRARIES}")
 
 if(USE_SIMD)
     MESSAGE(STATUS "using SIMD")
