@@ -323,8 +323,190 @@ namespace xvigra
 
     TEST(slicer, c_order)
     {
-        xt::dynamic_shape<std::size_t> shape{2,3,4};
+        using namespace slicing;
+        shape_t<> shape{2,3,4};
         slicer nav1(shape), nav2(shape);
+
+        nav1.set_free_axes(0);
+        nav2.set_iterate_axes(1, 2);
+        for(index_t k=0; k<shape[1]; ++k)
+        {
+            for(index_t i=0; i<shape[2]; ++i, ++nav1, nav2++)
+            {
+                EXPECT_EQ((*nav1)[0], slice(all()));
+                EXPECT_EQ((*nav1)[1].start, k);
+                EXPECT_EQ((*nav1)[1].stop, k);
+                EXPECT_EQ((*nav1)[1].step, 0);
+                EXPECT_EQ((*nav1)[2].start, i);
+                EXPECT_EQ((*nav1)[2].stop, i);
+                EXPECT_EQ((*nav1)[2].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[0], slice(all()));
+                EXPECT_EQ((*nav2)[1].start, k);
+                EXPECT_EQ((*nav2)[1].stop, k);
+                EXPECT_EQ((*nav2)[1].step, 0);
+                EXPECT_EQ((*nav2)[2].start, i);
+                EXPECT_EQ((*nav2)[2].stop, i);
+                EXPECT_EQ((*nav2)[2].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+
+        nav1.set_free_axes(1);
+        nav2.set_iterate_axes(0, 2);
+        for(index_t k=0; k<shape[0]; ++k)
+        {
+            for(index_t i=0; i<shape[2]; ++i, ++nav1, ++nav2)
+            {
+                EXPECT_EQ((*nav1)[1], slice(all()));
+                EXPECT_EQ((*nav1)[0].start, k);
+                EXPECT_EQ((*nav1)[0].stop, k);
+                EXPECT_EQ((*nav1)[0].step, 0);
+                EXPECT_EQ((*nav1)[2].start, i);
+                EXPECT_EQ((*nav1)[2].stop, i);
+                EXPECT_EQ((*nav1)[2].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[1], slice(all()));
+                EXPECT_EQ((*nav2)[0].start, k);
+                EXPECT_EQ((*nav2)[0].stop, k);
+                EXPECT_EQ((*nav2)[0].step, 0);
+                EXPECT_EQ((*nav2)[2].start, i);
+                EXPECT_EQ((*nav2)[2].stop, i);
+                EXPECT_EQ((*nav2)[2].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+
+        nav1.set_free_axes(2);
+        nav2.set_iterate_axes(0, 1);
+        for(index_t k=0; k<shape[0]; ++k)
+        {
+            for(index_t i=0; i<shape[1]; ++i, ++nav1, ++nav2)
+            {
+                EXPECT_EQ((*nav1)[2], slice(all()));
+                EXPECT_EQ((*nav1)[0].start, k);
+                EXPECT_EQ((*nav1)[0].stop, k);
+                EXPECT_EQ((*nav1)[0].step, 0);
+                EXPECT_EQ((*nav1)[1].start, i);
+                EXPECT_EQ((*nav1)[1].stop, i);
+                EXPECT_EQ((*nav1)[1].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[2], slice(all()));
+                EXPECT_EQ((*nav2)[0].start, k);
+                EXPECT_EQ((*nav2)[0].stop, k);
+                EXPECT_EQ((*nav2)[0].step, 0);
+                EXPECT_EQ((*nav2)[1].start, i);
+                EXPECT_EQ((*nav2)[1].stop, i);
+                EXPECT_EQ((*nav2)[1].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+    }
+
+    TEST(slicer, f_order)
+    {
+        using namespace slicing;
+        shape_t<> shape{2,3,4};
+        slicer nav1(shape, f_order), nav2(shape, f_order);
+
+        nav1.set_free_axes(0);
+        nav2.set_iterate_axes(1, 2);
+        for(index_t i=0; i<shape[2]; ++i)
+        {
+            for(index_t k=0; k<shape[1]; ++k, ++nav1, nav2++)
+            {
+                EXPECT_EQ((*nav1)[0], slice(all()));
+                EXPECT_EQ((*nav1)[1].start, k);
+                EXPECT_EQ((*nav1)[1].stop, k);
+                EXPECT_EQ((*nav1)[1].step, 0);
+                EXPECT_EQ((*nav1)[2].start, i);
+                EXPECT_EQ((*nav1)[2].stop, i);
+                EXPECT_EQ((*nav1)[2].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[0], slice(all()));
+                EXPECT_EQ((*nav2)[1].start, k);
+                EXPECT_EQ((*nav2)[1].stop, k);
+                EXPECT_EQ((*nav2)[1].step, 0);
+                EXPECT_EQ((*nav2)[2].start, i);
+                EXPECT_EQ((*nav2)[2].stop, i);
+                EXPECT_EQ((*nav2)[2].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+
+        nav1.set_free_axes(1);
+        nav2.set_iterate_axes(0, 2);
+        for(index_t i=0; i<shape[2]; ++i)
+        {
+            for(index_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
+            {
+                EXPECT_EQ((*nav1)[1], slice(all()));
+                EXPECT_EQ((*nav1)[0].start, k);
+                EXPECT_EQ((*nav1)[0].stop, k);
+                EXPECT_EQ((*nav1)[0].step, 0);
+                EXPECT_EQ((*nav1)[2].start, i);
+                EXPECT_EQ((*nav1)[2].stop, i);
+                EXPECT_EQ((*nav1)[2].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[1], slice(all()));
+                EXPECT_EQ((*nav2)[0].start, k);
+                EXPECT_EQ((*nav2)[0].stop, k);
+                EXPECT_EQ((*nav2)[0].step, 0);
+                EXPECT_EQ((*nav2)[2].start, i);
+                EXPECT_EQ((*nav2)[2].stop, i);
+                EXPECT_EQ((*nav2)[2].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+
+        nav1.set_free_axes(2);
+        nav2.set_iterate_axes(0, 1);
+        for(index_t i=0; i<shape[1]; ++i)
+        {
+            for(index_t k=0; k<shape[0]; ++k, ++nav1, ++nav2)
+            {
+                EXPECT_EQ((*nav1)[2], slice(all()));
+                EXPECT_EQ((*nav1)[0].start, k);
+                EXPECT_EQ((*nav1)[0].stop, k);
+                EXPECT_EQ((*nav1)[0].step, 0);
+                EXPECT_EQ((*nav1)[1].start, i);
+                EXPECT_EQ((*nav1)[1].stop, i);
+                EXPECT_EQ((*nav1)[1].step, 0);
+                EXPECT_TRUE(nav1.has_more());
+
+                EXPECT_EQ((*nav2)[2], slice(all()));
+                EXPECT_EQ((*nav2)[0].start, k);
+                EXPECT_EQ((*nav2)[0].stop, k);
+                EXPECT_EQ((*nav2)[0].step, 0);
+                EXPECT_EQ((*nav2)[1].start, i);
+                EXPECT_EQ((*nav2)[1].stop, i);
+                EXPECT_EQ((*nav2)[1].step, 0);
+                EXPECT_TRUE(nav2.has_more());
+            }
+        }
+        EXPECT_FALSE(nav1.has_more());
+        EXPECT_FALSE(nav2.has_more());
+    }
+
+    TEST(xslicer, c_order)
+    {
+        xt::dynamic_shape<std::size_t> shape{2,3,4};
+        xslicer nav1(shape), nav2(shape);
 
         nav1.set_free_axes(0);
         nav2.set_iterate_axes(1, 2);
@@ -384,10 +566,10 @@ namespace xvigra
         EXPECT_FALSE(nav2.has_more());
     }
 
-    TEST(slicer, f_order)
+    TEST(xslicer, f_order)
     {
         xt::dynamic_shape<std::size_t> shape{2,3,4};
-        slicer nav1(shape, f_order), nav2(shape, f_order);
+        xslicer nav1(shape, f_order), nav2(shape, f_order);
 
         nav1.set_free_axes(0);
         nav2.set_iterate_axes(1, 2);

@@ -154,6 +154,16 @@ namespace xvigra
         {
             return slice(b, b, special_step_tag());
         }
+
+        bool operator==(slice const & o) const
+        {
+            return start == o.start && stop == o.stop && step == o.step;
+        }
+
+        bool operator!=(slice const & o) const
+        {
+            return start != o.start || stop != o.stop || step != o.step;
+        }
     };
 
     /****************/
@@ -213,10 +223,118 @@ namespace xvigra
     class slicer
     {
       public:
+        using shape_type = shape_t<>;
+
+        slicer(shape_type const & shape, tags::memory_order order=c_order)
+        : shape_(shape)
+        , order_(order)
+        {}
+
+        template <class ... T>
+        void set_free_axes(index_t a, T ... r)
+        {
+            set_free_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
+        }
+
+        template <class C,
+                  VIGRA_REQUIRE<container_concept<C>::value>>
+        void set_free_axes(C axes)
+        {
+            slice_ = slice_vector(shape_.size(), slice::bind(0));
+            iter_axes_ = shape_type::range(shape_.size());
+
+            std::sort(axes.begin(), axes.end());
+            for(index_t k=axes.size()-1; k>=0; --k)
+            {
+                iter_axes_ = iter_axes_.erase(axes[k]);
+                slice_[axes[k]] = slice(slicing::all());
+            }
+            if(order_ == c_order)
+            {
+                iter_axes_ = reversed(iter_axes_);
+            }
+        }
+
+        template <class ... T>
+        void set_iterate_axes(index_t a, T ... r)
+        {
+            set_iterate_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
+        }
+
+        template <class C,
+                  VIGRA_REQUIRE<container_concept<C>::value>>
+        void set_iterate_axes(C axes)
+        {
+            slice_ = slice_vector(shape_.size(), slice(slicing::all()));
+            std::sort(axes.begin(), axes.end());
+            for(index_t k=0; k<axes.size(); ++k)
+            {
+                slice_[axes[k]] = slice::bind(0);
+            }
+            iter_axes_ = shape_type(axes.begin(), axes.end());
+            if(order_ == c_order)
+            {
+                iter_axes_ = reversed(iter_axes_);
+            }
+        }
+
+        slice_vector const & operator*() const
+        {
+            return slice_;
+        }
+
+        void operator++()
+        {
+            index_t k = 0;
+            for(; k < iter_axes_.size(); ++k)
+            {
+                index_t i = iter_axes_[k];
+                auto & s = slice_[i];
+                if(s.start == shape_[i]-1)
+                {
+                    s.start = 0;
+                    s.stop  = 0;
+                }
+                else
+                {
+                    ++s.start;
+                    ++s.stop;
+                    break;
+                }
+            }
+            if(k == iter_axes_.size())
+            {
+                iter_axes_.resize(0);
+            }
+        }
+
+        void operator++(int)
+        {
+            ++(*this);
+        }
+
+        bool has_more() const
+        {
+            return iter_axes_.size() > 0;
+        }
+
+      private:
+        shape_type shape_, iter_axes_;
+        slice_vector slice_;
+        tags::memory_order order_;
+    };
+
+    /***********/
+    /* xslicer */
+    /***********/
+
+    class xslicer
+    {
+      public:
         using shape_type = xt::dynamic_shape<std::size_t>;
 
         template <class SHAPE>
-        slicer(SHAPE const & shape, tags::memory_order order=c_order)
+        xslicer(SHAPE const & shape, tags::memory_order order=c_order)
         : shape_(shape.begin(), shape.end())
         , iter_inc_(order == c_order ? -1 : 1)
         {}
