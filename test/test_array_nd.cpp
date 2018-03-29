@@ -146,14 +146,14 @@ namespace xvigra
 
                     EXPECT_EQ(*iter1, c);
                     EXPECT_FALSE(iter1 == end1);
-                    // EXPECT_TRUE(iter1 < end1); // FIXME: xtensor bug
+                    EXPECT_TRUE(iter1 < end1);
                 }
             }
         }
         EXPECT_FALSE(v1.is_inside(S{ -1,-1,-1 }));
         EXPECT_TRUE(v1.is_outside(S{ -1,-1,-1 }));
         EXPECT_TRUE(iter1 == end1);
-        // EXPECT_FALSE(iter1 < end1); // FIXME: xtensor bug
+        EXPECT_FALSE(iter1 < end1);
 
         V v2(s, default_axistags(3, false, f_order), &data1[0], f_order);
 
@@ -778,7 +778,7 @@ namespace xvigra
             EXPECT_FALSE(m(V()+1));
             EXPECT_FALSE(m(a));
             EXPECT_FALSE(m(a+1));
-            EXPECT_FALSE(m(xt::view(a, xt::ellipsis())));
+            EXPECT_FALSE(m(xt::view(a, xt::all())));
             xt::slice_vector sv;
             sv.push_back(xt::ellipsis());
             EXPECT_FALSE(m(xt::dynamic_view(a, sv)));
@@ -798,7 +798,7 @@ namespace xvigra
             detail::overlapping_memory_checker m(&v2(), &v2[v2.shape()-1]+1);
             EXPECT_TRUE(m(a));
             EXPECT_TRUE(m(a+1));
-            EXPECT_TRUE(m(xt::view(a, xt::ellipsis())));
+            EXPECT_TRUE(m(xt::view(a, xt::all())));
             xt::slice_vector sv;
             sv.push_back(xt::ellipsis());
             EXPECT_TRUE(m(xt::dynamic_view(a, sv)));
