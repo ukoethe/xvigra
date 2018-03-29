@@ -423,7 +423,7 @@ namespace xvigra
             EXPECT_EQ(a1, v1.transpose());
 
             a1 = 1;
-            EXPECT_EQ(a1.reshape(s), a0+1);
+            EXPECT_EQ(a1.reshaped(s), a0+1);
 
             data = a0.raw_data();
             EXPECT_NE(a1.raw_data(), data);

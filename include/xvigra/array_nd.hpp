@@ -702,27 +702,42 @@ namespace xvigra
             return true; // FIXME: check
         }
 
-        template <index_t M>
-        auto
-        reshape(shape_t<M> const & new_shape,
-                axis_tags<M> new_axistags = axis_tags<M>{},
-                tags::memory_order order = c_order) const
+            // reshape the view in-place
+        template <class SHAPE>
+        void
+        reshape(SHAPE const & new_shape, tags::memory_order order = c_order)
         {
             vigra_precondition(is_consecutive(),
                 "view_nd::reshape(): only consecutive arrays can be reshaped.");
-            vigra_precondition(prod(new_shape) == size(),
+            vigra_precondition(N == runtime_size || N == (index_t)new_shape.size(),
+                "view_nd::reshape(): dimension mismatch between old and new shape.");
+            vigra_precondition((index_t)xt::compute_size(new_shape) == size(),
                 "view_nd::reshape(): size mismatch between old and new shape.");
+            unsigned owner = flags_ & owns_memory_flag;
+            view_nd(new_shape, data_, order).swap_impl(*this);
+            flags_ |= owner;
+        }
+
+            // return a reshaped view
+        template <index_t M>
+        view_nd<T, M>
+        reshaped(shape_t<M> const & new_shape,
+                 axis_tags<M> new_axistags = axis_tags<M>{},
+                 tags::memory_order order = c_order) const
+        {
+            view_nd<T, M> res(shape_, strides_, axistags_, data_);
+            res.reshape(new_shape, order);
             if(new_axistags.size() != new_shape.size())
             {
-                new_axistags = axis_tags<M>(new_shape.size(), tags::axis_unknown);
+                res.set_axistags(new_axistags);
             }
-            return view_nd<T, M>(new_shape, new_axistags, data_, order);
+            return res;
         }
 
         decltype(auto)
-        flatten() const
+        flattened() const
         {
-            return reshape(shape_t<>{size()});
+            return reshaped(shape_t<1>{size()});
         }
 
             // needed for semantic_base::assign(expr)
@@ -1912,8 +1927,9 @@ namespace xvigra
             return *this;
         }
 
+        template <class SHAPE>
         void
-        resize(shape_type const & new_shape,
+        resize(SHAPE const & new_shape,
                axistags_type const & new_axistags = axistags_type{},
                tags::memory_order order = c_order)
         {
@@ -1923,12 +1939,10 @@ namespace xvigra
             {
                 new_axistags = axistags_type(new_shape.size(), tags::axis_unknown);
             }
-            if(this->size() == prod(new_shape))
+            if(this->size() == xt::compute_size(new_shape))
             {
-                auto this_r = this->reshape(new_shape, new_axistags, order);
-                this->swap_impl(this_r);
-                this->flags_ |= this->owns_memory_flag;
-            }
+                this->reshape(new_shape, new_axistags, order);
+           }
             else
             {
                 array_nd(new_shape, new_axistags, order).swap(*this);
