@@ -68,6 +68,11 @@ namespace xt
         {
             using type = xvigra::tiny_vector<V, L, R>;
         };
+
+        template <class T, xvigra::index_t N, class A>
+        struct is_xexpression_impl<xvigra::array_nd<T, N, A>> : std::true_type
+        {
+        };
     }
 
     template <class T, xvigra::index_t N>

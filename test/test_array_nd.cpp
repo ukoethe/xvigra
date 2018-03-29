@@ -71,6 +71,7 @@ namespace xvigra
         EXPECT_TRUE(raw_data_api);
      }
 
+#if 1
     TYPED_TEST(array_nd_test, constructor)
     {
         using A = TypeParam;
@@ -422,7 +423,7 @@ namespace xvigra
             EXPECT_EQ(a1, v1.transpose());
 
             a1 = 1;
-            EXPECT_EQ(a1.reshape(s), a0.view()+1); // FIXME: a0+1 doesn't compile
+            EXPECT_EQ(a1.reshape(s), a0+1);
 
             data = a0.raw_data();
             EXPECT_NE(a1.raw_data(), data);
@@ -434,14 +435,14 @@ namespace xvigra
             EXPECT_EQ(a0.size(), 0);
             EXPECT_EQ(a0.raw_data(), nullptr);
             EXPECT_EQ(a1.raw_data(), data);
-            EXPECT_TRUE(all(equal(a1.view(), 0))); // FIXME
+            EXPECT_TRUE(all(equal(a1, 0)));
 
             A a2(a1);
             EXPECT_NE(a1.raw_data(), a2.raw_data());
             EXPECT_EQ(a1, a2);
 
             a2 += xt::xscalar<T>(1);
-            EXPECT_EQ(a1.view()+1, a2);
+            EXPECT_EQ(a1+1, a2);
 
             // move assignment only copies data, because shapes are equal
             data = a1.raw_data();
@@ -963,8 +964,8 @@ namespace xvigra
         array_nd<T, M> a{{1, 5},
                          {3, 2},
                          {4, 7}};
-        auto sc = xt::eval(sum(a.view(), {0}));
-        auto sr = xt::eval(sum(a.view(), {1}));
+        auto sc = xt::eval(sum(a, {0}));
+        auto sr = xt::eval(sum(a, {1}));
 
         xt::xarray<T> ec{8, 14},
                       er{6, 5, 11};
@@ -1047,5 +1048,5 @@ namespace xvigra
         EXPECT_EQ(vsized.channel_axis(), 3);
         EXPECT_EQ(vsized.dimension(), 4);
     }
-
+#endif
 } // namespace xvigra
