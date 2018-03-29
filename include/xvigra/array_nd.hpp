@@ -354,18 +354,11 @@ namespace xvigra
         using const_reference        = const_value_type &;
         using pointer                = value_type *;
         using const_pointer          = const_value_type *;
-        // using iterator               = value_type *;
-        // using const_iterator         = const_value_type *;
-        // using reverse_iterator       = std::reverse_iterator<iterator>;
-        // using const_reverse_iterator = std::reverse_iterator<const_iterator>;
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
         using shape_type             = shape_t<internal_dimension>;
         using strides_type           = shape_type;
         using axistags_type          = tiny_vector<tags::axis_tag, internal_dimension>;
-        // using container_type         = T[N];
-        // static constexpr xt::layout_type static_layout = xt::layout_type::row_major;
-        // static constexpr bool contiguous_layout = true;
 
         using self_type = view_nd<T, N>;
         using semantic_base = xt::xview_semantic<self_type>;
@@ -465,7 +458,6 @@ namespace xvigra
             if(m(rhs))
             {
                 // memory overlaps => we need a temporary
-                /* FIXME: use array_nd instread of xarray */
                 semantic_base::assign(xt::xarray<value_type>(rhs));
             }
             else
