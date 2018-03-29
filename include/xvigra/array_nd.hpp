@@ -334,7 +334,7 @@ namespace xvigra
 
       public:
 
-        enum flags_t { consecutive_memory_flag = 1,
+        enum flags_t { contiguous_memory_flag = 1,
                        owns_memory_flag = 2
                      };
 
@@ -372,10 +372,10 @@ namespace xvigra
 
       protected:
 
-        unsigned is_consecutive_impl() const
+        unsigned is_contiguous_impl() const
         {
             return (size() == 0 || &operator[](shape_ - 1) == &operator[](size()-1))
-                         ? consecutive_memory_flag
+                         ? contiguous_memory_flag
                          : 0;
         }
 
@@ -431,7 +431,7 @@ namespace xvigra
             strides_   = e.strides();
             axistags_  = axistags_type();
             data_      = const_cast<pointer>(e.raw_data() + e.raw_data_offset());
-            flags_     = is_consecutive_impl() & ~owns_memory_flag;
+            flags_     = is_contiguous_impl() & ~owns_memory_flag;
         }
 
         template <class E, class P=pointer,
@@ -549,7 +549,7 @@ namespace xvigra
         , strides_(strides)
         , axistags_(axistags)
         , data_(const_cast<pointer>(ptr))
-        , flags_(is_consecutive_impl())
+        , flags_(is_contiguous_impl())
         {
             XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
                 "view_nd(): invalid shape.");
@@ -587,7 +587,7 @@ namespace xvigra
         {
             vigra_precondition(has_data(),
                 "vigra_nd::operator=(): cannot assign a value to an empty array.");
-            if(is_consecutive())
+            if(is_contiguous())
             {
                 std::fill(data_, data_+size(), v);
             }
@@ -699,8 +699,8 @@ namespace xvigra
         void
         reshape(SHAPE const & new_shape, tags::memory_order order = c_order)
         {
-            vigra_precondition(is_consecutive(),
-                "view_nd::reshape(): only consecutive arrays can be reshaped.");
+            vigra_precondition(is_contiguous(),
+                "view_nd::reshape(): only contiguous arrays can be reshaped.");
             vigra_precondition(N == runtime_size || N == (index_t)new_shape.size(),
                 "view_nd::reshape(): dimension mismatch between old and new shape.");
             vigra_precondition((index_t)xt::compute_size(new_shape) == size(),
@@ -717,8 +717,8 @@ namespace xvigra
                  axis_tags<M> new_axistags = axis_tags<M>{},
                  tags::memory_order order = c_order) const
         {
-            vigra_precondition(is_consecutive(),
-                "view_nd::reshaped(): only consecutive arrays can be reshaped.");
+            vigra_precondition(is_contiguous(),
+                "view_nd::reshaped(): only contiguous arrays can be reshaped.");
             vigra_precondition(prod(new_shape) == size(),
                 "view_nd::reshaped(): size mismatch between old and new shape.");
             if(new_axistags.size() != new_shape.size())
@@ -1464,11 +1464,11 @@ namespace xvigra
         }
 
             /**
-            * Returns true iff this view refers to consecutive memory.
+            * Returns true iff this view refers to contiguous memory.
             */
-        bool is_consecutive() const
+        bool is_contiguous() const
         {
-            return (flags_ & consecutive_memory_flag) != 0;
+            return (flags_ & contiguous_memory_flag) != 0;
         }
 
             /**
@@ -1699,7 +1699,7 @@ namespace xvigra
             vigra_precondition(all_greater_equal(shape, 0),
                 "array_nd(): invalid shape.");
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
            /** copy constructor
              */
@@ -1708,7 +1708,7 @@ namespace xvigra
         , allocated_data_(rhs.allocated_data_)
         {
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
             /** move constructor
@@ -1748,7 +1748,7 @@ namespace xvigra
                 }
             }
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
             /** Constructor from an xtensor data structure or array expression.
@@ -1760,7 +1760,7 @@ namespace xvigra
         , allocated_data_(this->size())
         {
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
             semantic_base::assign(std::forward<E>(e));
         }
 
@@ -1792,7 +1792,7 @@ namespace xvigra
             vigra_precondition(this->size() == (index_t)allocated_data_.size(),
                 "array_nd(): iterator range length contradics shape.");
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
         array_nd(xt::nested_initializer_list_t<T, 1> t)
@@ -1803,7 +1803,7 @@ namespace xvigra
                 "array_nd(): initializer_list has incompatible dimension.");
             xt::nested_copy(allocated_data_.begin(), t);
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
         array_nd(xt::nested_initializer_list_t<T, 2> t)
@@ -1814,7 +1814,7 @@ namespace xvigra
                 "array_nd(): initializer_list has incompatible dimension.");
             xt::nested_copy(allocated_data_.begin(), t);
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
         array_nd(xt::nested_initializer_list_t<T, 3> t)
@@ -1825,7 +1825,7 @@ namespace xvigra
                 "array_nd(): initializer_list has incompatible dimension.");
             xt::nested_copy(allocated_data_.begin(), t);
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
         array_nd(xt::nested_initializer_list_t<T, 4> t)
@@ -1836,7 +1836,7 @@ namespace xvigra
                 "array_nd(): initializer_list has incompatible dimension.");
             xt::nested_copy(allocated_data_.begin(), t);
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
         array_nd(xt::nested_initializer_list_t<T, 5> t)
@@ -1847,7 +1847,7 @@ namespace xvigra
                 "array_nd(): initializer_list has incompatible dimension.");
             xt::nested_copy(allocated_data_.begin(), t);
             this->data_  = &allocated_data_[0];
-            this->flags_ |= this->consecutive_memory_flag | this->owns_memory_flag;
+            this->flags_ |= this->contiguous_memory_flag | this->owns_memory_flag;
         }
 
             /** Copy assignment.<br>

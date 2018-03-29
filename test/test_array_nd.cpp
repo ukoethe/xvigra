@@ -104,7 +104,7 @@ namespace xvigra
         EXPECT_EQ(v1.strides(1), 2);
         EXPECT_EQ(v1.raw_data(), &data1[0]);
         EXPECT_TRUE(v1.has_data());
-        EXPECT_TRUE(v1.is_consecutive());
+        EXPECT_TRUE(v1.is_contiguous());
         EXPECT_FALSE(v1.owns_memory());
         bool memory_range_check = v1.memory_range() == tiny_vector<char*, 2>{(char*)&data1.front(), (char*)(1+&data1.back())};
         EXPECT_TRUE(memory_range_check);
@@ -160,7 +160,7 @@ namespace xvigra
         EXPECT_EQ(v2.shape(), s);
         EXPECT_EQ(v2.strides(), (S{ 1,4,12 }));
         EXPECT_EQ(v2.raw_data(), &data1[0]);
-        EXPECT_TRUE(v2.is_consecutive());
+        EXPECT_TRUE(v2.is_contiguous());
         EXPECT_FALSE(v2.owns_memory());
         EXPECT_EQ(v2.axistags(), (axis_tags<N>{ tags::axis_x, tags::axis_y , tags::axis_z }));
 
@@ -191,7 +191,7 @@ namespace xvigra
         EXPECT_EQ(v3.shape(), s);
         EXPECT_EQ(v3.strides(), (S{ 3,1,12 }));
         EXPECT_EQ(v3.raw_data(), &data1[0]);
-        EXPECT_TRUE(v3.is_consecutive());
+        EXPECT_TRUE(v3.is_contiguous());
 
         c = 0;
         for(int x=0; x<s[2]; ++x)
@@ -365,7 +365,7 @@ namespace xvigra
             EXPECT_EQ(v.strides(), v1.strides());
             EXPECT_EQ(v.raw_data(), v1.raw_data());
             EXPECT_EQ(v.channel_axis(), 2);
-            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_TRUE(v.is_contiguous());
             EXPECT_FALSE(v.owns_memory());
 
             // shape mismatch errors
@@ -384,7 +384,7 @@ namespace xvigra
             EXPECT_EQ(v.shape(), a.shape());
             EXPECT_EQ(v.strides(), a.strides());
             EXPECT_EQ(v.raw_data(), a.raw_data());
-            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_TRUE(v.is_contiguous());
             EXPECT_FALSE(v.owns_memory());
         }
         {
@@ -395,7 +395,7 @@ namespace xvigra
             EXPECT_EQ(v.shape(), shape_t<>(a.shape()));
             EXPECT_EQ(v.strides(), shape_t<>(a.strides()));
             EXPECT_EQ(v.raw_data(), a.raw_data());
-            EXPECT_TRUE(v.is_consecutive());
+            EXPECT_TRUE(v.is_contiguous());
             EXPECT_FALSE(v.owns_memory());
         }
         {
@@ -474,7 +474,7 @@ namespace xvigra
         EXPECT_TRUE(v1.has_channel_axis());
         EXPECT_EQ(v1.channel_axis(), 1);
         EXPECT_EQ(v1.axistags(), (axis_tags<>{tags::axis_x, tags::axis_c}));
-        EXPECT_TRUE(v1.is_consecutive());
+        EXPECT_TRUE(v1.is_contiguous());
         EXPECT_FALSE(v1.owns_memory());
 
         int count = 0;
@@ -490,7 +490,7 @@ namespace xvigra
         EXPECT_TRUE(v2.has_channel_axis());
         EXPECT_EQ(v2.channel_axis(), 1);
         EXPECT_EQ(v2.axistags(), (axis_tags<>{ tags::axis_y, tags::axis_c }));
-        EXPECT_FALSE(v2.is_consecutive());
+        EXPECT_FALSE(v2.is_contiguous());
 
         count = 0;
         for (int i = 0; i < s[0]; ++i)
@@ -504,7 +504,7 @@ namespace xvigra
         EXPECT_EQ(v3.shape(), (shape_t<2>{4, 3}));
         EXPECT_FALSE(v3.has_channel_axis());
         EXPECT_EQ(v3.axistags(), (axis_tags<>{ tags::axis_y, tags::axis_x }));
-        EXPECT_FALSE(v3.is_consecutive());
+        EXPECT_FALSE(v3.is_contiguous());
 
         count = 0;
         for (int i = 0; i < s[0]; ++i)
@@ -518,7 +518,7 @@ namespace xvigra
         EXPECT_EQ(v4[{0}], (v0[{3, 2, 1}]));
         EXPECT_FALSE(v4.has_channel_axis());
         EXPECT_EQ(v4.axistags(), (axis_tags<>{ tags::axis_unknown }));
-        EXPECT_TRUE(v4.is_consecutive());
+        EXPECT_TRUE(v4.is_contiguous());
 
         auto v5 = v0.bind_left(shape_t<2>{3, 2});
         EXPECT_EQ(v5.shape(), shape_t<1>{2});
@@ -1002,7 +1002,7 @@ namespace xvigra
         EXPECT_EQ(v1.dimension(), 4);
         EXPECT_EQ(v1.shape(), s.insert(3, 3));
         EXPECT_EQ(v1.channel_axis(), 3);
-        EXPECT_TRUE(v1.is_consecutive());
+        EXPECT_TRUE(v1.is_contiguous());
 
         v1.bind(3, 1) += 1;
         v1.bind(3, 2) += 2;
@@ -1019,7 +1019,7 @@ namespace xvigra
         EXPECT_EQ(v2.dimension(), 3);
         EXPECT_EQ(v2.shape(), s);
         EXPECT_FALSE(v2.has_channel_axis());
-        EXPECT_FALSE(v2.is_consecutive());
+        EXPECT_FALSE(v2.is_contiguous());
 
         EXPECT_TRUE(v1.bind(3, 0) == v2);
         EXPECT_TRUE(v1.bind(3, 1) == v.bind_channel(1));
