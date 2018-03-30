@@ -242,6 +242,7 @@ namespace xvigra
         {
             slice_ = slice_vector(shape_.size(), slice::bind(0));
             iter_axes_ = shape_type::range(shape_.size());
+            start_axis_ = 0;
 
             std::sort(axes.begin(), axes.end());
             for(index_t k=axes.size()-1; k>=0; --k)
@@ -266,6 +267,8 @@ namespace xvigra
         void set_iterate_axes(C axes)
         {
             slice_ = slice_vector(shape_.size(), slice(slicing::all()));
+            start_axis_ = 0;
+
             std::sort(axes.begin(), axes.end());
             for(index_t k=0; k<axes.size(); ++k)
             {
@@ -285,7 +288,7 @@ namespace xvigra
 
         void operator++()
         {
-            index_t k = 0;
+            index_t k = start_axis_;
             for(; k < iter_axes_.size(); ++k)
             {
                 index_t i = iter_axes_[k];
@@ -304,7 +307,7 @@ namespace xvigra
             }
             if(k == iter_axes_.size())
             {
-                iter_axes_.resize(0);
+                start_axis_ = shape_.size();
             }
         }
 
@@ -315,12 +318,13 @@ namespace xvigra
 
         bool has_more() const
         {
-            return iter_axes_.size() > 0;
+            return start_axis_ != shape_.size();
         }
 
       private:
         shape_type shape_, iter_axes_;
         slice_vector slice_;
+        index_t start_axis_;
         tags::memory_order order_;
     };
 
