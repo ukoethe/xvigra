@@ -39,6 +39,7 @@
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xcontainer.hpp>
 #include <xtensor/xsemantic.hpp>
+#include <xtensor/xeval.hpp>
 
 #include "global.hpp"
 #include "concepts.hpp"
@@ -330,6 +331,7 @@ namespace xvigra
     class view_nd
     : public xt::xiterable<view_nd<T, N>>
     , public xt::xview_semantic<view_nd<T, N>>
+    , public tags::view_nd_tag
     {
 
       public:
@@ -361,6 +363,7 @@ namespace xvigra
         using axistags_type          = tiny_vector<tags::axis_tag, internal_dimension>;
 
         using self_type = view_nd<T, N>;
+        using view_type = self_type;
         using semantic_base = xt::xview_semantic<self_type>;
 
         using inner_shape_type = shape_type;
@@ -554,6 +557,13 @@ namespace xvigra
             XVIGRA_ASSERT_MSG(all_greater_equal(shape, 0),
                 "view_nd(): invalid shape.");
             zero_singleton_strides();
+        }
+
+        template <class E>
+        view_nd(const xt::xexpression<E>& ex)
+        : view_nd()
+        {
+            create_view_impl(ex.derived_cast());
         }
 
         view_nd & operator=(view_nd const & rhs)
@@ -1612,6 +1622,46 @@ namespace xvigra
     swap(view_nd<T,N> & v1, view_nd<T,N> & v2)
     {
         v1.swap(v2);
+    }
+
+    template <class E,
+              VIGRA_REQUIRE<view_nd_concept<E>::value>>
+    inline decltype(auto)
+    make_view(E && e)
+    {
+        return std::forward<E>(e);
+    }
+
+    template <class EC, xt::layout_type L, class SC, class Tag>
+    inline auto
+    make_view(xt::xarray_container<EC, L, SC, Tag> const & e)
+    {
+        using T = typename xt::xarray_container<EC, L, SC, Tag>::value_type;
+        return view_nd<T>(e);
+    }
+
+    template <class EC, std::size_t N, xt::layout_type L , class Tag>
+    inline auto
+    make_view(xt::xtensor_container<EC, N, L, Tag> const & e)
+    {
+        using T = typename xt::xtensor_container<EC, N, L, Tag>::value_type;
+        return view_nd<T, (index_t)N>(e);
+    }
+
+    template <class E,
+              VIGRA_REQUIRE<has_raw_data_api<E>::value>>
+    inline decltype(auto)
+    eval_expr(E && e)
+    {
+        return std::forward<E>(e);
+    }
+
+    template <class E,
+              VIGRA_REQUIRE<!has_raw_data_api<E>::value>>
+    inline auto
+    eval_expr(E && e)
+    {
+        return xt::eval(std::forward<E>(e));
     }
 
     /************/
