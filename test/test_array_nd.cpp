@@ -263,6 +263,8 @@ namespace xvigra
         swap(v0, v1);
         EXPECT_EQ(v1, a7);
         EXPECT_EQ(v0, a9);
+
+        // FIXME: add more tests for reshape() and resize()
     }
 
     TYPED_TEST(array_nd_test, assignment)
@@ -544,9 +546,9 @@ namespace xvigra
         auto v6 = v0.bind_right(shape_t<2>{1, 0});
         EXPECT_EQ(v6.shape(), shape_t<1>{4});
         EXPECT_EQ(v6[0], (v0[{0, 1, 0}]));
-        // EXPECT_EQ(v6[1], (v0[{1, 1, 0}]));// FIXME: adapt to changed semantics of operator[]
-        // EXPECT_EQ(v6[2], (v0[{2, 1, 0}]));
-        // EXPECT_EQ(v6[3], (v0[{3, 1, 0}]));
+        EXPECT_EQ(v6[v0.strides(0)], (v0[{1, 1, 0}]));
+        EXPECT_EQ(v6[2*v0.strides(0)], (v0[{2, 1, 0}]));
+        EXPECT_EQ(v6[3*v0.strides(0)], (v0[{3, 1, 0}]));
         EXPECT_FALSE(v6.has_channel_axis());
         EXPECT_EQ(v6.axistags(), (axis_tags<>{ tags::axis_y }));
         EXPECT_TRUE(v0.bind(1,1).bind(1,0) == v6);
@@ -566,8 +568,8 @@ namespace xvigra
 
         auto v9 = v0.diagonal();
         EXPECT_EQ(v9.shape(), shape_t<1>{2});
-        // EXPECT_EQ(v9[0], (v0[{0, 0, 0}]));
-        // EXPECT_EQ(v9[1], (v0[{1, 1, 1}]));  // FIXME: adapt to changed semantics of operator[]
+        EXPECT_EQ(v9[0], (v0[{0, 0, 0}]));
+        EXPECT_EQ(v9[v9.strides(0)], (v0[{1, 1, 1}]));
     }
 
     TYPED_TEST(array_nd_test, subarray)
