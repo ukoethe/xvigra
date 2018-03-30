@@ -233,7 +233,7 @@ namespace xvigra
         template <class ... T>
         void set_free_axes(index_t a, T ... r)
         {
-            set_free_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
+            set_free_axes(shape_t<1+sizeof...(T)>{a, r...});
         }
 
         template <class C,
@@ -258,7 +258,7 @@ namespace xvigra
         template <class ... T>
         void set_iterate_axes(index_t a, T ... r)
         {
-            set_iterate_axes(std::array<index_t, 1+sizeof...(T)>{a, r...});
+            set_iterate_axes(shape_t<1+sizeof...(T)>{a, r...});
         }
 
         template <class C,
@@ -290,7 +290,7 @@ namespace xvigra
             {
                 index_t i = iter_axes_[k];
                 auto & s = slice_[i];
-                if(s.start == shape_[i]-1)
+                if(s.start >= shape_[i]-1)
                 {
                     s.start = 0;
                     s.stop  = 0;
