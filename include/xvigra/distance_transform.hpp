@@ -32,11 +32,11 @@
 #define XVIGRA_DISTANCE_TRANSFORM_HPP
 
 #include <vector>
-#include <xtensor/xstrided_view.hpp>
+#include <xtensor/xeval.hpp>
 #include "global.hpp"
 #include "concepts.hpp"
 #include "math.hpp"
-#include "slicer.hpp"
+#include "slice.hpp"
 
 namespace xvigra
 {
@@ -62,8 +62,8 @@ namespace xvigra
         // 'out' will contain updated squared distances.
         // When 'invert=true', the parabolas open downwards (needed for dilation), otherwise
         // upwards (needed for distance transform and erosion)
-        template <class InArray, class OutArray>
-        void distance_parabola(InArray const & in, OutArray && out, double sigma, bool invert=false)
+        template <class T1, index_t N1, class T2, index_t N2>
+        void distance_parabola(view_nd<T1, N1> const & in, view_nd<T2, N2> out, double sigma, bool invert=false)
         {
             // we assume that the data in the input is distance squared and treat it as such
             double w = in.shape()[0];
@@ -77,8 +77,7 @@ namespace xvigra
             }
             double sigma22 = 2.0 * sigma2;
 
-            using src_type = typename InArray::value_type;
-            using influence = distance_parabola_stack_entry<src_type>;
+            using influence = distance_parabola_stack_entry<T1>;
 
             std::vector<influence> _stack;
             _stack.push_back(influence(in(0), 0.0, 0.0, w));
@@ -135,31 +134,22 @@ namespace xvigra
         /* distance_transform_impl */
         /***************************/
 
-        template <class InArray, class OutArray, class SigmaArray>
-        void distance_transform_impl(InArray const & in, OutArray && out,
+        template <class T1, index_t N1, class T2, index_t N2, class SigmaArray>
+        void distance_transform_impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
                                      SigmaArray const & sigmas, bool invert = false)
         {
             // Sigma is the spread of the parabolas. It determines the structuring element size
             // for ND morphology. When calculating the distance transforms, sigma is usually set to 1,
             // unless one wants to account for anisotropic pixel pitch.
             index_t N = in.dimension();
-            xt::dynamic_shape<std::size_t> shape(in.shape().begin(), in.shape().end());
 
-            // we need the Promote type here if we want to invert the image (dilation)
-            using dest_type = typename std::decay_t<OutArray>::value_type;
-            using tmp_type = xt::real_promote_type_t<dest_type>;
-
-            slicer nav(shape);
+            slicer nav(in.shape());
 
             // operate on last dimension first
             nav.set_free_axes(N-1);
             for(; nav.has_more(); ++nav)
             {
-                // First copy source for better cache locality (FIXME: check this!).
-                // Invert the values if necessary (only needed for grayscale morphology).
-                xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(in, *nav);
-
-                distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[N-1], invert);
+                distance_parabola(in.view(*nav), out.view(*nav), sigmas[N-1], invert);
             }
 
             // operate on further dimensions
@@ -168,9 +158,7 @@ namespace xvigra
                 nav.set_free_axes(d);
                 for(; nav.has_more(); ++nav)
                 {
-                    xt::xtensor<tmp_type, 1> tmp = xt::dynamic_view(out, *nav);
-
-                    distance_parabola(tmp, xt::dynamic_view(out, *nav), sigmas[d], invert);
+                    distance_parabola(out.view(*nav), out.view(*nav), sigmas[d], invert);
                 }
             }
         }
@@ -256,10 +244,9 @@ namespace xvigra
     */
     // doxygen_overloaded_function(template <...> void separableMultiDistSquared)
 
-    template <class InArray, class OutArray, class PitchArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void distance_transform_squared(InArray const & in, OutArray && out,
-                                    bool background, PitchArray const & pixel_pitch)
+    template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
+    void distance_transform_squared_impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                                         bool background, PitchArray const & pixel_pitch)
     {
         index_t N = in.shape().size();
 
@@ -274,22 +261,19 @@ namespace xvigra
             inf += sq(pixel_pitch[k]*in.shape()[k]);
         }
 
-        using in_type = typename std::decay_t<InArray>::value_type;
-        using out_type = typename std::decay_t<OutArray>::value_type;
-        auto lowest  = std::numeric_limits<out_type>::lowest(),
-             highest = std::numeric_limits<out_type>::max();
-        if(std::is_integral<out_type>::value && (pitch_is_real || inf > (double)highest))
+        auto lowest  = std::numeric_limits<T2>::lowest(),
+             highest = std::numeric_limits<T2>::max();
+        if(std::is_integral<T2>::value && (pitch_is_real || inf > (double)highest))
         {
             // work on a real-valued temporary array
-            using tmp_type = xt::real_promote_type_t<out_type>;
-            rebind_container_t<OutArray, tmp_type> tmp(out.shape());
+            array_nd<real_promote_type_t<T2>, N2> tmp(out.shape());
             if(background)
             {
-                tmp = where(equal(in, in_type()), inf, 0.0);
+                tmp = where(equal(in, 0), inf, 0.0);
             }
             else
             {
-                tmp = where(not_equal(in, in_type()), inf, 0.0);
+                tmp = where(not_equal(in, 0), inf, 0.0);
             }
 
             detail::distance_transform_impl(tmp, tmp, pixel_pitch);
@@ -301,19 +285,27 @@ namespace xvigra
             // work directly on the destination array
             if(background)
             {
-                out = where(equal(in, in_type()), inf, 0.0);
+                out = where(equal(in, 0), inf, 0.0);
             }
             else
             {
-                out = where(not_equal(in, in_type()), inf, 0.0);
+                out = where(not_equal(in, 0), inf, 0.0);
             }
 
             detail::distance_transform_impl(out, out, pixel_pitch);
         }
     }
 
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    template <class InArray, class OutArray, class PitchArray>
+    void distance_transform_squared(InArray const & in, OutArray && out,
+                                    bool background, PitchArray const & pixel_pitch)
+    {
+        auto && src  = eval_expr(in);
+        auto && dest = eval_expr(std::forward<OutArray>(out));
+        distance_transform_squared_impl(make_view(src), make_view(dest), background, pixel_pitch);
+    }
+
+    template <class InArray, class OutArray>
     void distance_transform_squared(InArray const & in, OutArray && out,
                                     bool background = false)
     {
@@ -329,21 +321,19 @@ namespace xvigra
 
         Calls distance_transform_squared() and takes the square root of the result.
     */
-    template <class InArray, class OutArray, class PitchArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    template <class InArray, class OutArray, class PitchArray>
     void distance_transform(InArray const & in, OutArray && out,
                             bool background, PitchArray const & pixel_pitch)
     {
-        distance_transform_squared(in, out, background, pixel_pitch);
+        distance_transform_squared(in, std::forward<OutArray>(out), background, pixel_pitch);
         out = sqrt(out);
     }
 
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    template <class InArray, class OutArray>
     void distance_transform(InArray const & in, OutArray && out,
                             bool background = false)
     {
-        distance_transform_squared(in, out, background);
+        distance_transform_squared(in, std::forward<OutArray>(out), background);
         out = sqrt(out);
     }
 
