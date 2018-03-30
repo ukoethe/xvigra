@@ -30,25 +30,101 @@
 
 #include <cstddef>
 #include "unittest.hpp"
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xarray.hpp>
-#include <xtensor/xadapt.hpp>
+#include <xvigra/array_nd.hpp>
 #include <xvigra/distance_transform.hpp>
 #include "test_distance_transform_data.hpp"
 
 namespace xvigra
 {
+    enum dimension_hint {};
+
+    constexpr dimension_hint operator"" _D ( unsigned long long int v )
+    {
+        return (dimension_hint)v;
+    }
+
+    template <class DERIVED>
+    struct functor_base
+    {
+        functor_base()
+        {}
+
+        DERIVED const & derived_cast() const
+        {
+            return static_cast<DERIVED const &>(*this);
+        }
+
+        template <class E1, class E2, class ... ARGS>
+        void operator()(E1 && e1, E2 && e2, ARGS ... a) const
+        {
+            auto && a1 = eval_expr(std::forward<E1>(e1));
+            auto && a2 = eval_expr(std::forward<E2>(e2));
+            derived_cast().impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
+        }
+
+        template <class E1, class E2, class ... ARGS>
+        void operator()(dimension_hint dim, E1 && e1, E2 && e2, ARGS ... a) const
+        {
+            vigra_precondition(e1.dimension() == dim || e1.dimension() == dim+1,
+                "input dimension contradicts dimension_hint.");
+            auto && a1 = eval_expr(std::forward<E1>(e1));
+            auto && a2 = eval_expr(std::forward<E2>(e2));
+            if(e1.dimension() == dim)
+            {
+                derived_cast().impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
+            }
+            else if(e1.dimension() == dim+1)
+            {
+                auto && v1 = make_view(a1);
+                auto && v2 = make_view(a2);
+                slicer nav(v1.shape());
+                nav.set_iterate_axes(dim);
+                for(; nav.has_more(); ++nav)
+                {
+                    derived_cast().impl(v1.view(*nav), v2.view(*nav), std::forward<ARGS>(a)...);
+                }
+            }
+        }
+    };
+
+    struct distance_transform_functor
+    : public functor_base<distance_transform_functor>
+    {
+        distance_transform_functor()
+        {}
+
+        template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
+        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                  bool background, PitchArray const & pixel_pitch) const
+        {
+            distance_transform_squared_impl(in, out, background, pixel_pitch);
+        }
+
+        template <class T1, index_t N1, class T2, index_t N2>
+        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                  bool background = false) const
+        {
+            std::vector<double> pixel_pitch(in.shape().size(), 1.0);
+            distance_transform_squared_impl(in, out, background, pixel_pitch);
+        }
+    };
+
+    namespace {
+        distance_transform_functor distance_transform_squared_f;
+    }
+
+
     TEST(distance_transform, impl_1d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances
-        xt::xtensor<double,1> in {10.0, 10.0, 10.0, 0.0, 10.0, 10.0, 10.0},
-                              res(in.shape(), 0.0),
-                              ref {9.0, 4.0, 1.0, 0.0, 1.0, 4.0, 9.0};
+        array_nd<double,1> in {10.0, 10.0, 10.0, 0.0, 10.0, 10.0, 10.0},
+                           res(in.shape(), 0.0),
+                           ref {9.0, 4.0, 1.0, 0.0, 1.0, 4.0, 9.0};
         std::vector<double> sigmas{ 1.0};
         detail::distance_parabola(in, res, sigmas[0]);
         EXPECT_EQ(res, ref);
-        res = xt::zeros<double>(in.shape()); // FIXME: there must be a simpler way
+        res = 0;
         detail::distance_transform_impl(in, res, sigmas, false);
         EXPECT_EQ(res, ref);
     }
@@ -57,17 +133,17 @@ namespace xvigra
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
         // output contains updated squared distances
-        xt::xtensor<double,2> in {{ 10.0, 10.0, 10.0, 10.0, 10.0},
-                                  { 10.0, 10.0, 10.0, 10.0, 10.0},
-                                  { 10.0, 10.0,  0.0, 10.0, 10.0},
-                                  { 10.0, 10.0, 10.0, 10.0, 10.0},
-                                  { 10.0, 10.0, 10.0, 10.0, 10.0}},
-                              res(in.shape(), 0.0),
-                              ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
-                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
-                                   { 4.0, 1.0, 0.0, 1.0, 4.0},
-                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
-                                   { 8.0, 5.0, 4.0, 5.0, 8.0}};
+        array_nd<double,2> in {{ 10.0, 10.0, 10.0, 10.0, 10.0},
+                               { 10.0, 10.0, 10.0, 10.0, 10.0},
+                               { 10.0, 10.0,  0.0, 10.0, 10.0},
+                               { 10.0, 10.0, 10.0, 10.0, 10.0},
+                               { 10.0, 10.0, 10.0, 10.0, 10.0}},
+                           res(in.shape(), 0.0),
+                           ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
+                                { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                { 4.0, 1.0, 0.0, 1.0, 4.0},
+                                { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                { 8.0, 5.0, 4.0, 5.0, 8.0}};
         std::vector<double> sigmas{ 1.0, 1.0 };
         detail::distance_transform_impl(in, res, sigmas, false);
         EXPECT_EQ(res, ref);
@@ -77,18 +153,21 @@ namespace xvigra
     {
         // input contains labeled regions, with label 0 indicating the background
         // reference contains squared distances
-        xt::xtensor<int,2> in {{ 1, 1, 1, 1, 1},
-                               { 1, 1, 1, 1, 1},
-                               { 1, 1, 0, 1, 1},
-                               { 1, 1, 1, 1, 1},
-                               { 1, 1, 1, 1, 1}};
-        xt::xtensor<double,2> res(in.shape(), 0.0),
-                              ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
-                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
-                                   { 4.0, 1.0, 0.0, 1.0, 4.0},
-                                   { 5.0, 2.0, 1.0, 2.0, 5.0},
-                                   { 8.0, 5.0, 4.0, 5.0, 8.0}};
-        distance_transform_squared(in, res);
+        array_nd<int,2> in {{ 1, 1, 1, 1, 1},
+                            { 1, 1, 1, 1, 1},
+                            { 1, 1, 0, 1, 1},
+                            { 1, 1, 1, 1, 1},
+                            { 1, 1, 1, 1, 1}};
+        array_nd<double,2> res(in.shape(), 0.0),
+                           ref {{ 8.0, 5.0, 4.0, 5.0, 8.0},
+                                { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                { 4.0, 1.0, 0.0, 1.0, 4.0},
+                                { 5.0, 2.0, 1.0, 2.0, 5.0},
+                                { 8.0, 5.0, 4.0, 5.0, 8.0}};
+        using namespace slicing;
+        distance_transform_squared_f(2_D, in.view(ellipsis(), newaxis()), res.view(ellipsis(), newaxis()));
+        // distance_transform_squared_f(in, res);
+        // distance_transform_squared(in, res);
         EXPECT_EQ(res, ref);
         distance_transform(in, res);
         EXPECT_TRUE(allclose(res, sqrt(ref)));
@@ -100,13 +179,11 @@ namespace xvigra
 
     TEST(distance_transform, 3d)
     {
-        using volume_t = xt::xarray<double>;
-        index_t size = 4200;
-        typename volume_t::shape_type shape{35,10,12};
+        shape_t<3> shape{35,10,12};
 
-        auto in  = xt::adapt((double*)volume_data, size, xt::no_ownership(), shape);
-        auto ref = xt::adapt((double*)ref_dist2,   size, xt::no_ownership(), shape);
-        volume_t res(shape, 0.0);
+        view_nd<double, 3> in(shape, (double*)volume_data);
+        view_nd<double, 3> ref(shape, (double*)ref_dist2);
+        array_nd<double>   res(shape, 0.0);
 
         distance_transform_squared(in, res);
         EXPECT_EQ(res, ref);
