@@ -87,6 +87,8 @@ namespace xvigra
     {
         struct tiny_vector_tag {};
 
+        struct view_nd_tag {};
+
         struct skip_initialization_tag {};
 
         using memory_order = xt::layout_type;

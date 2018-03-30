@@ -157,6 +157,15 @@ namespace xvigra
     : public std::true_type
     {};
 
+    /*******************/
+    /* view_nd_concept */
+    /*******************/
+
+    template <class T>
+    struct view_nd_concept
+    : public std::is_base_of<tags::view_nd_tag, std::decay_t<T>>
+    {};
+
     /*********************/
     /* iterator concepts */
     /*********************/
