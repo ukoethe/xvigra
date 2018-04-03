@@ -31,89 +31,12 @@
 #include <cstddef>
 #include "unittest.hpp"
 #include <xvigra/array_nd.hpp>
+#include <xvigra/functor_base.hpp>
 #include <xvigra/distance_transform.hpp>
 #include "test_distance_transform_data.hpp"
 
 namespace xvigra
 {
-    enum dimension_hint {};
-
-    constexpr dimension_hint operator"" _D ( unsigned long long int v )
-    {
-        return (dimension_hint)v;
-    }
-
-    template <class DERIVED>
-    struct functor_base
-    {
-        functor_base()
-        {}
-
-        DERIVED const & derived_cast() const
-        {
-            return static_cast<DERIVED const &>(*this);
-        }
-
-        template <class E1, class E2, class ... ARGS>
-        void operator()(E1 && e1, E2 && e2, ARGS ... a) const
-        {
-            auto && a1 = eval_expr(std::forward<E1>(e1));
-            auto && a2 = eval_expr(std::forward<E2>(e2));
-            derived_cast().impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
-        }
-
-        template <class E1, class E2, class ... ARGS>
-        void operator()(dimension_hint dim, E1 && e1, E2 && e2, ARGS ... a) const
-        {
-            vigra_precondition(e1.dimension() == dim || e1.dimension() == dim+1,
-                "input dimension contradicts dimension_hint.");
-            auto && a1 = eval_expr(std::forward<E1>(e1));
-            auto && a2 = eval_expr(std::forward<E2>(e2));
-            if(e1.dimension() == dim)
-            {
-                derived_cast().impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
-            }
-            else if(e1.dimension() == dim+1)
-            {
-                auto && v1 = make_view(a1);
-                auto && v2 = make_view(a2);
-                slicer nav(v1.shape());
-                nav.set_iterate_axes(dim);
-                for(; nav.has_more(); ++nav)
-                {
-                    derived_cast().impl(v1.view(*nav), v2.view(*nav), std::forward<ARGS>(a)...);
-                }
-            }
-        }
-    };
-
-    struct distance_transform_functor
-    : public functor_base<distance_transform_functor>
-    {
-        distance_transform_functor()
-        {}
-
-        template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
-        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
-                  bool background, PitchArray const & pixel_pitch) const
-        {
-            distance_transform_squared_impl(in, out, background, pixel_pitch);
-        }
-
-        template <class T1, index_t N1, class T2, index_t N2>
-        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
-                  bool background = false) const
-        {
-            std::vector<double> pixel_pitch(in.shape().size(), 1.0);
-            distance_transform_squared_impl(in, out, background, pixel_pitch);
-        }
-    };
-
-    namespace {
-        distance_transform_functor distance_transform_squared_f;
-    }
-
-
     TEST(distance_transform, impl_1d)
     {
         // input contains initial squared distances or infinity (here approximated by 10.0)
@@ -165,12 +88,12 @@ namespace xvigra
                                 { 5.0, 2.0, 1.0, 2.0, 5.0},
                                 { 8.0, 5.0, 4.0, 5.0, 8.0}};
         using namespace slicing;
-        distance_transform_squared_f(2_D, in.view(ellipsis(), newaxis()), res.view(ellipsis(), newaxis()));
-        // distance_transform_squared_f(in, res);
-        // distance_transform_squared(in, res);
+        distance_transform_squared(in, res);
         EXPECT_EQ(res, ref);
         distance_transform(in, res);
         EXPECT_TRUE(allclose(res, sqrt(ref)));
+        distance_transform_squared(2_d, in, res);
+        EXPECT_EQ(res, ref);
         distance_transform_squared(1 - in, res, true);
         EXPECT_EQ(res, ref);
         distance_transform(1 - in, res, true);

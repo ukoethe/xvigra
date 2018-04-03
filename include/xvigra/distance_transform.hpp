@@ -37,6 +37,7 @@
 #include "concepts.hpp"
 #include "math.hpp"
 #include "slice.hpp"
+#include "functor_base.hpp"
 
 namespace xvigra
 {
@@ -165,6 +166,82 @@ namespace xvigra
 
      } // namespace detail
 
+    struct distance_transform_squared_functor
+    : public functor_base<distance_transform_squared_functor>
+    {
+        std::string name = "distance_transform_squared";
+
+        template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
+        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                  bool background, PitchArray const & pixel_pitch) const
+        {
+            index_t N = in.shape().size();
+
+            double inf = 1.0; // approximation of infinity
+            bool pitch_is_real = false;
+            for(index_t k=0; k<N; ++k)
+            {
+                if(int(pixel_pitch[k]) != pixel_pitch[k])
+                {
+                    pitch_is_real = true;
+                }
+                inf += sq(pixel_pitch[k]*in.shape()[k]);
+            }
+
+            auto lowest  = std::numeric_limits<T2>::lowest(),
+                 highest = std::numeric_limits<T2>::max();
+            if(std::is_integral<T2>::value && (pitch_is_real || inf > (double)highest))
+            {
+                // work on a real-valued temporary array
+                array_nd<real_promote_type_t<T2>, N2> tmp(out.shape());
+                if(background)
+                {
+                    tmp = where(equal(in, 0), inf, 0.0);
+                }
+                else
+                {
+                    tmp = where(not_equal(in, 0), inf, 0.0);
+                }
+
+                detail::distance_transform_impl(tmp, tmp, pixel_pitch);
+
+                out = where(tmp > highest, highest, where(tmp < lowest, lowest, round(tmp)));
+            }
+            else
+            {
+                // work directly on the destination array
+                if(background)
+                {
+                    out = where(equal(in, 0), inf, 0.0);
+                }
+                else
+                {
+                    out = where(not_equal(in, 0), inf, 0.0);
+                }
+
+                detail::distance_transform_impl(out, out, pixel_pitch);
+            }
+        }
+
+        template <class T1, index_t N1, class T2, index_t N2>
+        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                  bool background = false) const
+        {
+            std::vector<double> pixel_pitch(in.shape().size(), 1.0);
+            impl(in, out, background, pixel_pitch);
+        }
+    };
+
+    namespace
+    {
+        distance_transform_squared_functor  distance_transform_squared;
+
+        inline void distance_transform_squared_dummy()
+        {
+            std::ignore = distance_transform_squared;
+        }
+    }
+
     /** \addtogroup DistanceTransform
     */
     //@{
@@ -244,74 +321,76 @@ namespace xvigra
     */
     // doxygen_overloaded_function(template <...> void separableMultiDistSquared)
 
-    template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
-    void distance_transform_squared_impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
-                                         bool background, PitchArray const & pixel_pitch)
-    {
-        index_t N = in.shape().size();
+    // template <class T1, index_t N1, class T2, index_t N2, class PitchArray>
+    // void distance_transform_squared_impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+    //                                      bool background, PitchArray const & pixel_pitch)
+    // {
+    //     index_t N = in.shape().size();
 
-        double inf = 1.0; // approximation of infinity
-        bool pitch_is_real = false;
-        for(index_t k=0; k<N; ++k)
-        {
-            if(int(pixel_pitch[k]) != pixel_pitch[k])
-            {
-                pitch_is_real = true;
-            }
-            inf += sq(pixel_pitch[k]*in.shape()[k]);
-        }
+    //     double inf = 1.0; // approximation of infinity
+    //     bool pitch_is_real = false;
+    //     for(index_t k=0; k<N; ++k)
+    //     {
+    //         if(int(pixel_pitch[k]) != pixel_pitch[k])
+    //         {
+    //             pitch_is_real = true;
+    //         }
+    //         inf += sq(pixel_pitch[k]*in.shape()[k]);
+    //     }
 
-        auto lowest  = std::numeric_limits<T2>::lowest(),
-             highest = std::numeric_limits<T2>::max();
-        if(std::is_integral<T2>::value && (pitch_is_real || inf > (double)highest))
-        {
-            // work on a real-valued temporary array
-            array_nd<real_promote_type_t<T2>, N2> tmp(out.shape());
-            if(background)
-            {
-                tmp = where(equal(in, 0), inf, 0.0);
-            }
-            else
-            {
-                tmp = where(not_equal(in, 0), inf, 0.0);
-            }
+    //     auto lowest  = std::numeric_limits<T2>::lowest(),
+    //          highest = std::numeric_limits<T2>::max();
+    //     if(std::is_integral<T2>::value && (pitch_is_real || inf > (double)highest))
+    //     {
+    //         // work on a real-valued temporary array
+    //         array_nd<real_promote_type_t<T2>, N2> tmp(out.shape());
+    //         if(background)
+    //         {
+    //             tmp = where(equal(in, 0), inf, 0.0);
+    //         }
+    //         else
+    //         {
+    //             tmp = where(not_equal(in, 0), inf, 0.0);
+    //         }
 
-            detail::distance_transform_impl(tmp, tmp, pixel_pitch);
+    //         detail::distance_transform_impl(tmp, tmp, pixel_pitch);
 
-            out = where(tmp > highest, highest, where(tmp < lowest, lowest, round(tmp)));
-        }
-        else
-        {
-            // work directly on the destination array
-            if(background)
-            {
-                out = where(equal(in, 0), inf, 0.0);
-            }
-            else
-            {
-                out = where(not_equal(in, 0), inf, 0.0);
-            }
+    //         out = where(tmp > highest, highest, where(tmp < lowest, lowest, round(tmp)));
+    //     }
+    //     else
+    //     {
+    //         // work directly on the destination array
+    //         if(background)
+    //         {
+    //             out = where(equal(in, 0), inf, 0.0);
+    //         }
+    //         else
+    //         {
+    //             out = where(not_equal(in, 0), inf, 0.0);
+    //         }
 
-            detail::distance_transform_impl(out, out, pixel_pitch);
-        }
-    }
+    //         detail::distance_transform_impl(out, out, pixel_pitch);
+    //     }
+    // }
 
-    template <class InArray, class OutArray, class PitchArray>
-    void distance_transform_squared(InArray const & in, OutArray && out,
-                                    bool background, PitchArray const & pixel_pitch)
-    {
-        auto && src  = eval_expr(in);
-        auto && dest = eval_expr(std::forward<OutArray>(out));
-        distance_transform_squared_impl(make_view(src), make_view(dest), background, pixel_pitch);
-    }
+    // replaced by a functor
 
-    template <class InArray, class OutArray>
-    void distance_transform_squared(InArray const & in, OutArray && out,
-                                    bool background = false)
-    {
-        std::vector<double> pixel_pitch(in.shape().size(), 1.0);
-        distance_transform_squared(in, out, background, pixel_pitch);
-    }
+    // template <class InArray, class OutArray, class PitchArray>
+    // void distance_transform_squared(InArray const & in, OutArray && out,
+    //                                 bool background, PitchArray const & pixel_pitch)
+    // {
+    //     auto && src  = eval_expr(in);
+    //     auto && dest = eval_expr(std::forward<OutArray>(out));
+    //     distance_transform_squared_impl(make_view(src), make_view(dest), background, pixel_pitch);
+    // }
+
+    // template <class InArray, class OutArray>
+    // void distance_transform_squared(InArray const & in, OutArray && out,
+    //                                 bool background = false)
+    // {
+    //     std::vector<double> pixel_pitch(in.shape().size(), 1.0);
+    //     distance_transform_squared(in, out, background, pixel_pitch);
+    // }
 
     /**********************/
     /* distance_transform */
@@ -322,16 +401,18 @@ namespace xvigra
         Calls distance_transform_squared() and takes the square root of the result.
     */
     template <class InArray, class OutArray, class PitchArray>
-    void distance_transform(InArray const & in, OutArray && out,
-                            bool background, PitchArray const & pixel_pitch)
+    inline void
+    distance_transform(InArray const & in, OutArray && out,
+                       bool background, PitchArray const & pixel_pitch)
     {
         distance_transform_squared(in, std::forward<OutArray>(out), background, pixel_pitch);
         out = sqrt(out);
     }
 
     template <class InArray, class OutArray>
-    void distance_transform(InArray const & in, OutArray && out,
-                            bool background = false)
+    inline void
+    distance_transform(InArray const & in, OutArray && out,
+                       bool background = false)
     {
         distance_transform_squared(in, std::forward<OutArray>(out), background);
         out = sqrt(out);
