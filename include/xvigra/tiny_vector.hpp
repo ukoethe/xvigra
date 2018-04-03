@@ -707,6 +707,14 @@ namespace xvigra
         return o;
     }
 
+    template <class T, index_t N, class R>
+    std::string to_string(tiny_vector<T, N, R> const & v)
+    {
+        std::stringstream s;
+        s << v;
+        return s.str();
+    }
+
     /**************************/
     /* tiny_vector comparison */
     /**************************/
