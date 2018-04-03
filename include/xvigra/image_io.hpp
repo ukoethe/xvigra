@@ -48,7 +48,7 @@ namespace xvigra
      *         is ``HEIGHT x WIDTH x CHANNELS`` of the loaded image, where
      *         ``CHANNELS`` are ordered in standard ``R G B (A)``.
      */
-    template <class T = unsigned char>
+    template <class T = float>
     array_nd<T> read_image(std::string filename)
     {
         auto close_file  =  [](OIIO::ImageInput * file)
