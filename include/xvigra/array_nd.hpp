@@ -356,8 +356,8 @@ namespace xvigra
         using const_reference        = const_value_type &;
         using pointer                = value_type *;
         using const_pointer          = const_value_type *;
-        using size_type              = std::size_t;
-        using difference_type        = std::ptrdiff_t;
+        using size_type              = std::size_t;  // FIXME:: xtensor fails to compile if size_type = index_t
+        using difference_type        = index_t;
         using shape_type             = shape_t<internal_dimension>;
         using strides_type           = shape_type;
         using axistags_type          = tiny_vector<tags::axis_tag, internal_dimension>;
@@ -397,7 +397,7 @@ namespace xvigra
             // ensure that singleton axes have zero stride
         void zero_singleton_strides()
         {
-            for (decltype(dimension()) k = 0; k < dimension(); ++k)
+            for (index_t k = 0; k < (index_t)dimension(); ++k)
             {
                 if (shape_[k] == 1)
                 {
@@ -432,7 +432,7 @@ namespace xvigra
         {
             shape_     = e.shape();
             strides_   = e.strides();
-            axistags_  = axistags_type();
+            axistags_  = axistags_type(e.shape().size());
             data_      = const_cast<pointer>(e.raw_data() + e.raw_data_offset());
             flags_     = is_contiguous_impl() & ~owns_memory_flag;
         }
@@ -876,11 +876,11 @@ namespace xvigra
                 \endcode
              */
         view_nd<T, ((N < 0) ? runtime_size : N-1)>
-        bind(int axis, index_t index=0) const
+        bind(index_t axis, index_t index=0) const
         {
             using view_t = view_nd<T, ((N < 0) ? runtime_size : N-1)>;
 
-            XVIGRA_ASSERT_MSG(0 <= axis && axis < dimension() && 0 <= index && index < shape_[axis],
+            XVIGRA_ASSERT_MSG(0 <= axis && axis < (index_t)dimension() && 0 <= index && index < shape_[axis],
                 "view_nd::bind(): index out of range.");
 
             auto point = unit_vector(shape(), axis, index);
@@ -941,7 +941,7 @@ namespace xvigra
         {
             vigra_precondition(axes.size() == indices.size(),
                 "view_nd::bind(): size mismatch between 'axes' and 'indices'.");
-            vigra_precondition(axes.size() <= dimension(),
+            vigra_precondition(axes.size() <= (index_t)dimension(),
                 "view_nd::bind(): axes.size() <= dimension() required.");
 
             view_nd<T, runtime_size> a(*this);
@@ -1184,9 +1184,9 @@ namespace xvigra
         view_nd
         subarray(shape_type p, shape_type q) const
         {
-            vigra_precondition(p.size() == dimension() && q.size() == dimension(),
+            vigra_precondition(p.size() == (index_t)dimension() && q.size() == (index_t)dimension(),
                 "view_nd::subarray(): size mismatch.");
-            for(decltype(dimension()) k=0; k<dimension(); ++k)
+            for(index_t k=0; k<(index_t)dimension(); ++k)
             {
                 if(p[k] < 0)
                     p[k] += shape_[k];
@@ -1247,7 +1247,7 @@ namespace xvigra
         {
             static_assert(M == internal_dimension || M == runtime_size || N == runtime_size,
                 "view_nd::transpose(): permutation.size() doesn't match dimension().");
-            vigra_precondition(permutation.size() == dimension(),
+            vigra_precondition(permutation.size() == (index_t)dimension(),
                 "view_nd::transpose(): permutation.size() doesn't match dimension().");
             shape_type p(permutation);
             view_nd res(transposed(shape_, p),
@@ -1299,7 +1299,7 @@ namespace xvigra
             const index_t offset = dot(strides(), point);
             using new_axistags_type = typename view_nd<T, M>::axistags_type;
             return view_nd<T, M>(new_shape, new_strides,
-                                 new_axistags_type(), data_ + offset);
+                                 new_axistags_type(new_shape.size()), data_ + offset);
         }
 
             // get a view with dynamic slicing
@@ -1312,7 +1312,7 @@ namespace xvigra
             const index_t offset = dot(strides(), point);
             using new_axistags_type = typename view_nd<T>::axistags_type;
             return view_nd<T>(new_shape, new_strides,
-                              new_axistags_type(), data_ + offset);
+                              new_axistags_type(new_shape.size()), data_ + offset);
         }
 
             // cast the type of a const array to its base view
@@ -1445,13 +1445,13 @@ namespace xvigra
         }
 
         template <index_t M = N>
-        std::size_t dimension(std::enable_if_t<M == runtime_size, bool> = true) const
+        size_type dimension(std::enable_if_t<M == runtime_size, bool> = true) const
         {
             return shape_.size();
         }
 
         template <index_t M = N>
-        constexpr std::size_t dimension(std::enable_if_t<(M > runtime_size), bool> = true) const
+        constexpr size_type dimension(std::enable_if_t<(M > runtime_size), bool> = true) const
         {
             return N;
         }
@@ -1523,9 +1523,9 @@ namespace xvigra
             return *this;
         }
 
-        view_nd & set_channel_axis(int c)
+        view_nd & set_channel_axis(index_t c)
         {
-            XVIGRA_ASSERT_MSG(0 <= c && c < dimension(),
+            XVIGRA_ASSERT_MSG(0 <= c && c < (index_t)dimension(),
                 "view_nd::set_channel_axis(): index out of range.");
             axistags_[c] = tags::axis_c;
             return *this;
@@ -1533,7 +1533,7 @@ namespace xvigra
 
         index_t channel_axis() const
         {
-            for(decltype(dimension()) k=0; k<dimension(); ++k)
+            for(index_t k=0; k<(index_t)dimension(); ++k)
                 if(axistags_[k] == tags::axis_c)
                     return k;
             return tags::axis_missing;
@@ -1541,7 +1541,7 @@ namespace xvigra
 
         index_t axis_index(tags::axis_tag tag) const
         {
-            for(decltype(dimension()) k=0; k<dimension(); ++k)
+            for(index_t k=0; k<(index_t)dimension(); ++k)
                 if(axistags_[k] == tag)
                     return k;
             return tags::axis_missing;

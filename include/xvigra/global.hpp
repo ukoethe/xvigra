@@ -106,6 +106,17 @@ namespace xvigra
         tags::skip_initialization_tag  dont_init;
     }
 
+    /******************/
+    /* dimension_hint */
+    /******************/
+
+    enum dimension_hint {};
+
+    constexpr dimension_hint operator"" _d ( unsigned long long int v )
+    {
+        return (dimension_hint)v;
+    }
+
     /*****************/
     /* multi_channel */
     /*****************/
@@ -176,6 +187,18 @@ namespace xvigra
     struct rebind_container<tiny_vector<T, N>, NT>
     {
         using type = tiny_vector<NT, N>;
+    };
+
+    template <class T, index_t N, class NT>
+    struct rebind_container<view_nd<T, N>, NT>
+    {
+        using type = array_nd<NT, N>;
+    };
+
+    template <class T, index_t N, class A, class NT>
+    struct rebind_container<array_nd<T, N, A>, NT>
+    {
+        using type = array_nd<NT, N>;
     };
 
     /********************/
