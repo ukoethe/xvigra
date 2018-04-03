@@ -33,6 +33,8 @@
 
 #include "global.hpp"
 #include <xtensor/xconcepts.hpp>
+#include <xtensor/xsemantic.hpp>
+#include <xtensor/xstrided_view.hpp>
 #include <type_traits>
 
 namespace xvigra
@@ -81,7 +83,7 @@ namespace xvigra
     {
         template <class T>
         struct tensor_concept
-        : public std::is_base_of<xt::xcontainer<T>, T>
+        : public std::is_base_of<xt::xcontainer_semantic<std::decay_t<T>>, std::decay_t<T>>
         {};
 
         template <class T, index_t N>
@@ -116,7 +118,7 @@ namespace xvigra
     {
         template <class T>
         struct has_raw_data_api
-        : public std::is_base_of<xt::xcontainer<T>, T>
+        : public std::is_base_of<xt::xcontainer_semantic<std::decay_t<T>>, std::decay_t<T>>
         {};
 
         template <class T, index_t N>
