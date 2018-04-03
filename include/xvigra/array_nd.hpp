@@ -508,7 +508,7 @@ namespace xvigra
         , data_(const_cast<pointer>(other.raw_data()))
         , flags_(other.flags() & ~owns_memory_flag)
         {
-            static_assert(N == runtime_size || M == runtime_size || M == N,
+            vigra_precondition(N == runtime_size || M == runtime_size || M == N,
                 "view_nd<N>(view_nd<M>): dimension mismatch.");
         }
 
@@ -917,7 +917,9 @@ namespace xvigra
         decltype(auto)
         bind(shape_t<M> const & axes, shape_t<M> const & indices) const
         {
-            static_assert(N == runtime_size || M <= N,
+            XVIGRA_ASSERT_MSG(axes.size() == indices.size(),
+                "view_nd::bind(): size mismatch between 'axes' and 'indices'.");
+            vigra_precondition(axes.size() <= (index_t)dimension(),
                 "view_nd::bind(shape_t<M>): M <= N required.");
             return bind(axes.back(), indices.back())
                       .bind(axes.pop_back(), indices.pop_back());
@@ -945,7 +947,7 @@ namespace xvigra
         view_nd<T, runtime_size>
         bind(shape_t<runtime_size> const & axes, shape_t<runtime_size> const & indices) const
         {
-            vigra_precondition(axes.size() == indices.size(),
+            XVIGRA_ASSERT_MSG(axes.size() == indices.size(),
                 "view_nd::bind(): size mismatch between 'axes' and 'indices'.");
             vigra_precondition(axes.size() <= (index_t)dimension(),
                 "view_nd::bind(): axes.size() <= dimension() required.");
@@ -1191,7 +1193,7 @@ namespace xvigra
         subarray(shape_type p, shape_type q) const
         {
             vigra_precondition(p.size() == (index_t)dimension() && q.size() == (index_t)dimension(),
-                "view_nd::subarray(): size mismatch.");
+                "view_nd::subarray(): dimension mismatch.");
             for(index_t k=0; k<(index_t)dimension(); ++k)
             {
                 if(p[k] < 0)
@@ -1251,8 +1253,6 @@ namespace xvigra
         view_nd
         transpose(shape_t<M> const & permutation) const
         {
-            static_assert(M == internal_dimension || M == runtime_size || N == runtime_size,
-                "view_nd::transpose(): permutation.size() doesn't match dimension().");
             vigra_precondition(permutation.size() == (index_t)dimension(),
                 "view_nd::transpose(): permutation.size() doesn't match dimension().");
             shape_type p(permutation);
@@ -1281,8 +1281,6 @@ namespace xvigra
         view_nd<T, M>
         view()
         {
-            static_assert(M == runtime_size || N == runtime_size || M == N,
-                "view_nd::view(): desired dimension is incompatible with dimension().");
             vigra_precondition(M == runtime_size || M == (index_t)dimension(),
                 "view_nd::view(): desired dimension is incompatible with dimension().");
             return view_nd<T, M>(shape_t<M>(shape_.begin(), shape_.begin()+dimension()),
@@ -1580,8 +1578,6 @@ namespace xvigra
         void
         swap_data(view_nd<U, M> rhs)
         {
-            static_assert(M == N || M == runtime_size || N == runtime_size,
-                "view_nd::swap_data(): incompatible dimensions.");
             vigra_precondition(shape() == rhs.shape(),
                 "view_nd::swap_data(): shape mismatch.");
             using std::swap;
