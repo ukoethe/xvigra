@@ -360,9 +360,40 @@ namespace xvigra
         }
     }
 
-    /*********************/
-    /* grayscale_erosion */
-    /*********************/
+    struct parabola_morphology_functor
+    : public functor_base<parabola_morphology_functor>
+    {
+        std::string name = "parabola_morphology";
+        bool dilate_;
+
+        parabola_morphology_functor(bool dilate)
+        : dilate_(dilate)
+        {}
+
+        template <class T1, index_t N1, class T2, index_t N2>
+        void impl(view_nd<T1, N1> const & in, view_nd<T2, N2> out,
+                  double sigma) const
+        {
+            std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+            detail::distance_transform_impl(in, out, pixel_pitch, dilate_);
+        }
+    };
+
+    namespace
+    {
+        parabola_morphology_functor  parabola_erosion(false);
+        parabola_morphology_functor  parabola_dilation(true);
+
+        inline void parabola_morphology_dummy()
+        {
+            std::ignore = parabola_erosion;
+            std::ignore = parabola_dilation;
+        }
+    }
+
+    /********************/
+    /* parabola_erosion */
+    /********************/
 
     /** \brief Parabolic grayscale erosion on multi-dimensional arrays.
 
@@ -435,38 +466,38 @@ namespace xvigra
     */
     // doxygen_overloaded_function(template <...> void multiGrayscaleErosion)
 
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void
-    grayscale_erosion(InArray const & in, OutArray && out, double sigma)
-    {
-        std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
-        detail::distance_transform_impl(in, out, pixel_pitch);
-    }
+    // template <class InArray, class OutArray,
+    //           VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    // void
+    // parabola_erosion(InArray const & in, OutArray && out, double sigma)
+    // {
+    //     std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+    //     detail::distance_transform_impl(in, out, pixel_pitch);
+    // }
 
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void
-    grayscale_erosion(multi_channel_handle<InArray> const & in,
-                      multi_channel_handle<OutArray> const & out, double sigma)
-    {
-        std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
+    // template <class InArray, class OutArray,
+    //           VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    // void
+    // parabola_erosion(multi_channel_handle<InArray> const & in,
+    //                   multi_channel_handle<OutArray> const & out, double sigma)
+    // {
+    //     std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
 
-        slicer inav(in.data.shape()),
-               onav(out.data.shape());
-        inav.set_iterate_axes(in.channel_axis);
-        onav.set_iterate_axes(out.channel_axis);
+    //     slicer inav(in.data.shape()),
+    //            onav(out.data.shape());
+    //     inav.set_iterate_axes(in.channel_axis);
+    //     onav.set_iterate_axes(out.channel_axis);
 
-        for(; inav.has_more(); ++inav, ++onav)
-        {
-            detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
-                                            xt::dynamic_view(out.data, *onav), pixel_pitch);
-        }
-    }
+    //     for(; inav.has_more(); ++inav, ++onav)
+    //     {
+    //         detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
+    //                                         xt::dynamic_view(out.data, *onav), pixel_pitch);
+    //     }
+    // }
 
-    /**********************/
-    /* grayscale_dilation */
-    /**********************/
+    /*********************/
+    /* parabola_dilation */
+    /*********************/
 
     /** \brief Parabolic grayscale dilation on multi-dimensional arrays.
 
@@ -539,57 +570,57 @@ namespace xvigra
     */
     // doxygen_overloaded_function(template <...> void multiGrayscaleDilation)
 
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void
-    grayscale_dilation(InArray const & in, OutArray && out, double sigma)
-    {
-        std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
-        detail::distance_transform_impl(in, out, pixel_pitch, true);
-    }
+    // template <class InArray, class OutArray,
+    //           VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    // void
+    // parabola_dilation(InArray const & in, OutArray && out, double sigma)
+    // {
+    //     std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
+    //     detail::distance_transform_impl(in, out, pixel_pitch, true);
+    // }
+
+    // template <class InArray, class OutArray,
+    //           VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
+    // void
+    // parabola_dilation(multi_channel_handle<InArray> const & in,
+    //                    multi_channel_handle<OutArray> const & out, double sigma)
+    // {
+    //     std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
+
+    //     slicer inav(in.data.shape()),
+    //            onav(out.data.shape());
+    //     inav.set_iterate_axes(in.channel_axis);
+    //     onav.set_iterate_axes(out.channel_axis);
+
+    //     for(; inav.has_more(); ++inav, ++onav)
+    //     {
+    //         detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
+    //                                         xt::dynamic_view(out.data, *onav), pixel_pitch, true);
+    //     }
+    // }
+
+    /********************/
+    /* parabola_opening */
+    /********************/
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void
-    grayscale_dilation(multi_channel_handle<InArray> const & in,
-                       multi_channel_handle<OutArray> const & out, double sigma)
-    {
-        std::vector<double> pixel_pitch(in.data.dimension()-1, 1.0 / sigma);
-
-        slicer inav(in.data.shape()),
-               onav(out.data.shape());
-        inav.set_iterate_axes(in.channel_axis);
-        onav.set_iterate_axes(out.channel_axis);
-
-        for(; inav.has_more(); ++inav, ++onav)
-        {
-            detail::distance_transform_impl(xt::dynamic_view(in.data, *inav),
-                                            xt::dynamic_view(out.data, *onav), pixel_pitch, true);
-        }
-    }
-
-    /*********************/
-    /* grayscale_opening */
-    /*********************/
-
-    template <class InArray, class OutArray,
-              VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
-    void
-    grayscale_opening(InArray const & in, OutArray && out, double sigma)
+    parabola_opening(InArray const & in, OutArray && out, double sigma)
     {
         std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
         detail::distance_transform_impl(in, out, pixel_pitch, false);
         detail::distance_transform_impl(out, out, pixel_pitch, true);
     }
 
-    /*********************/
-    /* grayscale_closing */
-    /*********************/
+    /********************/
+    /* parabola_closing */
+    /********************/
 
     template <class InArray, class OutArray,
               VIGRA_REQUIRE<tensor_concept<InArray>::value && tensor_concept<OutArray>::value>>
     void
-    grayscale_closing(InArray const & in, OutArray && out, double sigma)
+    parabola_closing(InArray const & in, OutArray && out, double sigma)
     {
         std::vector<double> pixel_pitch(in.shape().size(), 1.0 / sigma);
         detail::distance_transform_impl(in, out, pixel_pitch, true);

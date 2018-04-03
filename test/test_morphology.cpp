@@ -29,12 +29,12 @@
 /************************************************************************/
 
 #include "unittest.hpp"
-#include <xtensor/xarray.hpp>
-#include <xtensor/xtensor.hpp>
+#include <xtensor/xinfo.hpp>
+#include <xvigra/array_nd.hpp>
 #include <xvigra/morphology.hpp>
 #include <xvigra/tiny_vector.hpp>
 
-xt::xtensor<std::uint8_t, 2>
+xvigra::array_nd<std::uint8_t, 2>
     img1 {{0, 0, 0, 0, 0, 0, 0},
           {0, 1, 1, 1, 1, 1, 0},
           {0, 1, 1, 1, 1, 1, 0},
@@ -50,7 +50,7 @@ xt::xtensor<std::uint8_t, 2>
           {0, 1, 2, 3, 4, 5, 6},
           {0, 1, 2, 3, 4, 5, 6}};
 
-xt::xtensor<std::uint8_t, 3>
+xvigra::array_nd<std::uint8_t, 3>
     vol {{{0, 0, 0, 0, 0},
           {0, 0, 0, 0, 0},
           {0, 0, 0, 0, 0},
@@ -85,7 +85,7 @@ namespace xvigra
 {
     TEST(morphology, 2d_binary)
     {
-        xt::xtensor<std::uint8_t, 2> out(img1.shape()),
+        array_nd<std::uint8_t, 2> out(img1.shape()),
             ref1 {{0, 0, 0, 0, 0, 0, 0},
                   {0, 0, 0, 0, 0, 0, 0},
                   {0, 0, 0, 0, 0, 0, 0},
@@ -121,7 +121,7 @@ namespace xvigra
 
     TEST(morphology, 3d_binary)
     {
-        xt::xtensor<std::uint8_t, 3> out(vol.shape()),
+        array_nd<std::uint8_t, 3> out(vol.shape()),
             ref1 {{{0, 0, 0, 0, 0},
                    {0, 0, 0, 0, 0},
                    {0, 0, 0, 0, 0},
@@ -192,7 +192,7 @@ namespace xvigra
 
     TEST(morphology, 2d_gray)
     {
-        xt::xtensor<uint8_t, 2> img(8*img1),
+        array_nd<uint8_t, 2> img(8*img1),
             res(img.shape(), 0),
             ref_e1 {{0, 0, 0, 0, 0, 0, 0},
                     {0, 1, 1, 1, 1, 1, 0},
@@ -223,23 +223,23 @@ namespace xvigra
                     {1, 2, 3, 4, 3, 2, 1},
                     {0, 1, 2, 3, 2, 1, 0}};
 
-        grayscale_erosion(img, res, 2);
+        parabola_erosion(img, res, 2);
         EXPECT_EQ(res, ref_e2);
 
-        grayscale_erosion(img, res, 1);
+        parabola_erosion(img, res, 1);
         EXPECT_EQ(res, ref_e1);
-        grayscale_dilation(res, res, 1);
+        parabola_dilation(res, res, 1);
         EXPECT_EQ(res, ref_o1);
 
-        grayscale_opening(img, res, 1);
+        parabola_opening(img, res, 1);
         EXPECT_EQ(res, ref_o1);
-        grayscale_closing(res, res, 1);
+        parabola_closing(res, res, 1);
         EXPECT_EQ(res, ref_c1);
     }
 
     TEST(morphology, multi_channel)
     {
-        xt::xarray<uint8_t> img(8*img1),
+        array_nd<uint8_t> img(8*img1),
             res(img.shape(), 0),
             ref_e1 {{0, 0, 0, 0, 0, 0, 0},
                     {0, 1, 1, 1, 1, 1, 0},
@@ -270,17 +270,18 @@ namespace xvigra
                     {1, 2, 3, 4, 3, 2, 1},
                     {0, 1, 2, 3, 2, 1, 0}};
 
-        auto mimg = xt::view(img, xt::all(), xt::all(), xt::newaxis()),
-             mres = xt::view(res, xt::all(), xt::all(), xt::newaxis());
-        grayscale_erosion(multi_channel(mimg), multi_channel(mres), 2);
+        using namespace slicing;
+        auto mimg = img.view(all(), all(), newaxis()),
+             mres = res.view(all(), all(), newaxis());
+        parabola_erosion(2_d, mimg, mres, 2);
         EXPECT_EQ(res, ref_e2);
 
-        grayscale_erosion(multi_channel(mimg), multi_channel(mres), 1);
+        parabola_erosion(2_d, mimg, mres, 1);
         EXPECT_EQ(res, ref_e1);
 
-        //  grayscale_opening(img, res, 1);
+        //  parabola_opening(img, res, 1);
         // EXPECT_EQ(res, ref_o1);
-        // grayscale_closing(res, res, 1);
+        // parabola_closing(res, res, 1);
         // EXPECT_EQ(res, ref_c1);
     }
 
