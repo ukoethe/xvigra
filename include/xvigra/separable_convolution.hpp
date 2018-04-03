@@ -277,7 +277,8 @@ namespace xvigra
             if(in.dimension() == 1)
             {
                 // std::cerr << "executing convolution along dimension 1.\n";
-                convolve_row(in, out, kernel, options.simd, left_padding, right_padding);
+                convolve_row(in.template view<1>(), out.template view<1>(), kernel,
+                             options.simd, left_padding, right_padding);
             }
             else
             {
@@ -291,13 +292,13 @@ namespace xvigra
                 for(; nav.has_more(); ++nav)
                 {
                     // std::cerr << "executing sideways convolution for dimension " << in.dimension() << ".\n";
-                    convolve_column(tmp.view(*nav), out.view(*nav), kernel, options.simd, left_padding, right_padding);
+                    convolve_column(tmp.view(*nav).template view<2>(), out.view(*nav).template view<2>(),
+                                    kernel, options.simd, left_padding, right_padding);
                 }
             }
         }
 
-        template <index_t N1, index_t N2>
-        void convolve_row(view_nd<float, N1> in, view_nd<float, N2> out,
+        void convolve_row(view_nd<float, 1> && in, view_nd<float, 1> && out,
                           kernel_1d<float> const & kernel, bool use_simd,
                           padding_mode left_padding, padding_mode right_padding) const
         {
@@ -358,6 +359,7 @@ namespace xvigra
                     }
                     if(start + k < 0)
                     {
+                        // left border treatment
                         // invariant: left_padding != no_padding
                         if(left_padding == reflect_padding)
                         {
@@ -389,6 +391,7 @@ namespace xvigra
                         }
                         // else if(left_padding == zero_padding) pass;
 
+                        // convolution of interior
                         if(use_simd)
                         {
                             detail::simd_fma_row(&in(0), in.shape(0)+k, &out(-k), rev_kernel(k+left));
@@ -404,7 +407,7 @@ namespace xvigra
                     }
                     else if(end + k > in.shape(0))
                     {
-                        // invariant: right_padding != no_padding
+                        // convolution of interior
                         if(use_simd)
                         {
                             detail::simd_fma_row(&in(k), in.shape(0)-k, &out(0), rev_kernel(k+left));
@@ -418,6 +421,8 @@ namespace xvigra
                             }
                         }
 
+                        // right border treatment
+                        // invariant: right_padding != no_padding
                         if(right_padding == reflect_padding)
                         {
                             for(index_t l=0; l<k; ++l)
@@ -450,6 +455,7 @@ namespace xvigra
                     }
                     else
                     {
+                        // convolution of interior
                         // invariants: left_padding == no_padding || right_padding == no_padding
                         if(use_simd)
                         {
@@ -468,8 +474,7 @@ namespace xvigra
             }
        }
 
-        template <index_t N1, index_t N2>
-        void convolve_column(view_nd<float, N1> in, view_nd<float, N2> && out,
+        void convolve_column(view_nd<float, 2> && in, view_nd<float, 2> && out,
                              kernel_1d<float> const & kernel, bool use_simd,
                              padding_mode left_padding, padding_mode right_padding) const
         {
@@ -511,6 +516,7 @@ namespace xvigra
                     index_t i = j + k - left;
                     if(i < 0)
                     {
+                        // left border treatment
                         if(left_padding == reflect_padding)
                         {
                             i = -i;
@@ -534,6 +540,7 @@ namespace xvigra
                     }
                     else if(i >= in.shape(0))
                     {
+                        // right border treatment
                         if(right_padding == reflect_padding)
                         {
                             i = 2*in.shape(0) - i - 2;
@@ -555,6 +562,8 @@ namespace xvigra
                             i = in.shape(0) - 1;
                         }
                     }
+
+                    // convolution of interior
                     if(use_simd)
                     {
                         detail::simd_fma_row(&in(i,0), in.shape(1), &out(j,0), rev_kernel(k));
@@ -571,6 +580,17 @@ namespace xvigra
             }
         }
     };
+
+    namespace
+    {
+        separable_convolution_functor  separable_convolution;
+
+        inline void separable_convolution_dummy()
+        {
+            std::ignore = separable_convolution;
+        }
+    }
+
 }
 
 #endif // XVIGRA_SEPARABLE_CONVOLUTION_HPP

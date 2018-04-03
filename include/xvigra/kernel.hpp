@@ -32,6 +32,7 @@
 #define XVIGRA_KERNEL_HPP
 
 #include "array_nd.hpp"
+#include "gaussian.hpp"
 
 namespace xvigra
 {
@@ -76,6 +77,69 @@ namespace xvigra
         kernel_1d<T> res(2*radius+1, radius);
         res = static_cast<T>(1.0 / res.size());
         return res;
+    }
+
+    template <class T=double>
+    inline kernel_1d<T>
+    gaussian_kernel_1d(double sigma, index_t radius)
+    {
+        kernel_1d<T> res(2*radius+1, radius);
+
+        gaussian<T> gauss(sigma);
+        T sum = 0;
+        for(index_t k=-radius; k<=radius; ++k)
+        {
+            T g = gauss(k);
+            res(k+radius) = g;
+            sum += g;
+        }
+        res *= T(1)/sum;
+        return res;
+    }
+
+    template <class T=double>
+    inline kernel_1d<T>
+    gaussian_kernel_1d(double sigma)
+    {
+        return gaussian_kernel_1d<T>(sigma, (index_t)(3.0 * sigma + 0.5));
+    }
+
+    template <class T=double>
+    inline kernel_1d<T>
+    gaussian_derivative_kernel_1d(double sigma, index_t order, index_t radius)
+    {
+        kernel_1d<T> res(2*radius+1, radius);
+
+        gaussian<T> gauss(sigma, order);
+        T sum = 0;
+        for(index_t k=-radius; k<=radius; ++k)
+        {
+            T g = gauss(k);
+            res(k+radius) = g;
+            sum += g;
+        }
+        if(order > 0)
+        {
+            res -= sum; // DC correction
+            sum = 0;
+            for(index_t k=-radius; k<=radius; ++k)
+            {
+                sum += res(k+radius) * math::pow(-k, order);
+            }
+            for(index_t i = 2; i <= order; ++i)
+            {
+                sum /= i;
+            }
+        }
+        res *= T(1) / sum;
+        return res;
+    }
+
+    template <class T=double>
+    inline kernel_1d<T>
+    gaussian_derivative_kernel_1d(double sigma, index_t order)
+    {
+        return gaussian_derivative_kernel_1d<T>(sigma, order, (index_t)((3.0 + 0.5*order) * sigma + 0.5));
     }
 }
 

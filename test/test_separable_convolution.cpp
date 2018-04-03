@@ -82,11 +82,20 @@ namespace xvigra
         slow_separable_convolution(in, out, kernel);
         EXPECT_TRUE(allclose(out, 1.0f));
         out = 0.0f;
-        separable_convolution_functor()(in, out, kernel);
+        separable_convolution(in, out, kernel);
         EXPECT_TRUE(allclose(out, 1.0f));
         if(out.size() < 200)
         {
             std::cerr << out << "\n";
         }
+    }
+
+    TEST(separable_convolution, 2d_gauss_filter)
+    {
+        auto && kernel = gaussian_kernel_1d<float>(2.0);
+        array_nd<float> in = read_image("color_image.tif"),
+                        out(in.shape(), 0);
+        separable_convolution(2_d, in, out, kernel);
+        write_image("smooth.png", out);
     }
 } // namespace xvigra
