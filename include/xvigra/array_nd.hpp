@@ -51,7 +51,7 @@
 // Bounds checking Macro used if VIGRA_CHECK_BOUNDS is defined.
 #ifdef XVIGRA_CHECK_BOUNDS
 #define XVIGRA_ASSERT_INSIDE(diff) \
-  vigra_precondition(this->is_inside(diff), "Index out of bounds")
+  vigra_precondition(this->is_inside(diff), "Index " + to_string(diff) + " out of bounds.")
 #else
 #define XVIGRA_ASSERT_INSIDE(diff)
 #endif
@@ -667,6 +667,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
+            XVIGRA_ASSERT_INSIDE(shape_t<>(first, last));
             return *(data_ + std::inner_product(strides_.begin(), strides_.end(), first, 0l));
         }
 
@@ -676,6 +677,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(std::distance(first, last) == dimension(),
                 "view_nd::element(): invalid index.");
+            XVIGRA_ASSERT_INSIDE(shape_t<>(first, last));
             return *(data_ + std::inner_product(strides_.begin(), strides_.end(), first, 0l));
         }
 
@@ -819,6 +821,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
+            XVIGRA_ASSERT_INSIDE(shape_t<1>{i});
             return *(data_ + i*strides_[dimension()-1]);
         }
 
@@ -831,6 +834,7 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
+            XVIGRA_ASSERT_INSIDE((shape_t<M>{i0, i1, i...}));
             return *(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
@@ -847,6 +851,7 @@ namespace xvigra
         {
             XVIGRA_ASSERT_MSG(dimension() <= 1,
                           "view_nd::operator()(int): only allowed if dimension() <= 1");
+            XVIGRA_ASSERT_INSIDE(shape_t<1>{i});
             return *(data_ + i*strides_[dimension()-1]);
         }
 
@@ -859,6 +864,7 @@ namespace xvigra
             static const index_t M = 2 + sizeof...(INDICES);
             XVIGRA_ASSERT_MSG(dimension() == M,
                 "view_nd::operator()(INDICES): number of indices must match dimension().");
+            XVIGRA_ASSERT_INSIDE((shape_t<M>{i0, i1, i...}));
             return *(data_ + dot(shape_t<M>{i0, i1, i...}, strides_));
         }
 
@@ -1303,7 +1309,7 @@ namespace xvigra
         }
 
             // get a view with dynamic slicing
-        auto
+        view_nd<T>
         view(slice_vector const & s)
         {
             shape_type point(dimension(), 0);
