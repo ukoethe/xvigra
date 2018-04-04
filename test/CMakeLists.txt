@@ -15,21 +15,22 @@ set(XVIGRA_TESTS
     main.cpp
     test_array_nd.cpp
     test_concepts.cpp
-    # test_distance_transform.cpp
-    # test_error.cpp
-    # test_gaussian.cpp
+    test_distance_transform.cpp
+    test_error.cpp
+    test_gaussian.cpp
     test_global.cpp
     test_math.cpp
-    # test_morphology.cpp
-    # test_padding.cpp
+    test_morphology.cpp
+    test_padding.cpp
+    test_separable_convolution.cpp
     test_slice.cpp
-    # test_splines.cpp
+    test_splines.cpp
     test_tiny_vector.cpp
 )
 
 add_executable(test_xvigra ${XVIGRA_TESTS})
 
-target_compile_options(test_xvigra PRIVATE "-Wreturn-local-addr" "-Wall")
+target_compile_options(test_xvigra PRIVATE "-Wall" "-Wno-deprecated")
 target_link_libraries(test_xvigra xvigra  ${TEST_FRAMEWORK})
 # target_link_libraries(test_xvigra xvigra xtensor_io ${BUILD_TESTS} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 

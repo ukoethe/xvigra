@@ -63,10 +63,10 @@ namespace xvigra
         using dest_type =  typename std::decay_t<OutArray>::value_type;
 
         index_t size = in.size();
-        vigra_precondition(left_padding_size + size + right_padding_size == out.size(),
+        vigra_precondition(left_padding_size + size + right_padding_size == (index_t)out.size(),
             "copy_with_padding(): output size must equal input size plus padding sizes.");
 
-        for(index_t k=0; k<in.shape()[0]; ++k)
+        for(index_t k=0; k<(index_t)in.shape()[0]; ++k)
         {
             out(k+left_padding_size) = in(k);
         }
@@ -132,7 +132,7 @@ namespace xvigra
         {
             case zero_padding:
             {
-                for(index_t k=size+left_padding_size; k<out.shape()[0]; ++k)
+                for(index_t k=size+left_padding_size; k<(index_t)out.shape()[0]; ++k)
                 {
                     out(k) = dest_type();
                 }
@@ -143,7 +143,7 @@ namespace xvigra
                 vigra_precondition(size > 0,
                     "copy_with_padding(): input size must be non-zero.");
 
-                for(index_t k=size+left_padding_size; k<out.shape()[0]; ++k)
+                for(index_t k=size+left_padding_size; k<(index_t)out.shape()[0]; ++k)
                 {
                     out(k) = conditional_cast<std::is_arithmetic<dest_type>::value, dest_type>(in(size-1));
                 }

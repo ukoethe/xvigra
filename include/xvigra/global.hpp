@@ -106,6 +106,11 @@ namespace xvigra
     namespace
     {
         tags::skip_initialization_tag  dont_init;
+
+        inline void skip_initialization_dummy()
+        {
+            std::ignore = dont_init;
+        }
     }
 
     /******************/
