@@ -36,6 +36,13 @@
 
 namespace xvigra
 {
+    enum symmetry_tag
+    {
+        symmetric,
+        anti_symmetric,
+        asymmetric
+    };
+
     template <class T>
     class kernel_1d
     : public array_nd<T, 1>
@@ -67,7 +74,13 @@ namespace xvigra
             return center_;
         }
 
+        symmetry_tag symmetry() const
+        {
+            return symmetry_;
+        }
+
         index_t center_;
+        symmetry_tag symmetry_;
     };
 
     template <class T=double>
@@ -76,6 +89,7 @@ namespace xvigra
     {
         kernel_1d<T> res(2*radius+1, radius);
         res = static_cast<T>(1.0 / res.size());
+        res.symmetry_ = symmetric;
         return res;
     }
 
@@ -94,6 +108,7 @@ namespace xvigra
             sum += g;
         }
         res *= T(1)/sum;
+        res.symmetry_ = symmetric;
         return res;
     }
 
@@ -132,6 +147,7 @@ namespace xvigra
             }
         }
         res *= T(1) / sum;
+        res.symmetry_ = (order % 2 == 0) ? symmetric : anti_symmetric;
         return res;
     }
 

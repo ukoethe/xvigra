@@ -180,12 +180,24 @@ namespace xvigra
     #if XVIGRA_USE_SIMD
         inline void simd_mul_row(float const * src, index_t size, float * dest, float a)
         {
-            auto sa = xsimd::set_simd(a);
-            constexpr index_t simd_size = decltype(sa)::size;
+            auto ba = xsimd::set_simd(a);
+
+            constexpr index_t simd_size = xsimd::simd_batch_traits<decltype(ba)>::size;
+            constexpr std::size_t align_bits = xsimd::simd_batch_traits<decltype(ba)>::align - 1;
+
+            for(; size>0; --size, ++dest, ++src)
+            {
+                if(((std::size_t)dest & align_bits) == 0)
+                {
+                    break; // dest is SIMD-aligned
+                }
+                *dest = *src * a;
+            }
+
             index_t simd_end = size - size % simd_size;
             for(index_t j=0; j<simd_end; j += simd_size)
             {
-                (sa * xsimd::load_unaligned(src+j)).store_unaligned(dest+j);
+                (ba * xsimd::load_unaligned(src+j)).store_aligned(dest+j);
             }
             for(index_t j=simd_end; j<size; ++j)
             {
@@ -195,16 +207,56 @@ namespace xvigra
 
         inline void simd_fma_row(float const * src, index_t size, float * dest, float a)
         {
-            auto sa = xsimd::set_simd(a);
-            constexpr index_t simd_size = decltype(sa)::size;
+            auto ba = xsimd::set_simd(a);
+
+            constexpr index_t simd_size = xsimd::simd_batch_traits<decltype(ba)>::size;
+            constexpr std::size_t align_bits = xsimd::simd_batch_traits<decltype(ba)>::align - 1;
+
+            for(; size>0; --size, ++dest, ++src)
+            {
+                if(((std::size_t)dest & align_bits) == 0)
+                {
+                    break; // dest is SIMD-aligned
+                }
+                *dest += *src * a;
+            }
+
             index_t simd_end = size - size % simd_size;
             for(index_t j=0; j<simd_end; j += simd_size)
             {
-                xsimd::fma(sa, xsimd::load_unaligned(src+j), xsimd::load_unaligned(dest+j)).store_unaligned(dest+j);
+                xsimd::fma(ba, xsimd::load_unaligned(src+j), xsimd::load_aligned(dest+j)).store_aligned(dest+j);
             }
             for(index_t j=simd_end; j<size; ++j)
             {
                 *(dest+j) += *(src+j) * a;
+            }
+        }
+
+        inline void simd_fma_row_symmetric(float const * src1, float const * src2,
+                                           index_t size, float * dest, float a)
+        {
+            auto ba = xsimd::set_simd(a);
+
+            constexpr index_t simd_size = xsimd::simd_batch_traits<decltype(ba)>::size;
+            constexpr std::size_t align_bits = xsimd::simd_batch_traits<decltype(ba)>::align - 1;
+
+           for(; size>0; --size, ++dest, ++src1, ++src2)
+            {
+                if(((std::size_t)dest & align_bits) == 0)
+                {
+                    break; // dest is SIMD-aligned
+                }
+                *dest += (*src1 + *src2) * a;
+            }
+
+            index_t simd_end = size - size % simd_size;
+            for(index_t j=0; j<simd_end; j += simd_size)
+            {
+                xsimd::fma(ba, xsimd::load_unaligned(src1+j) +xsimd::load_unaligned(src2+j), xsimd::load_aligned(dest+j)).store_aligned(dest+j);
+            }
+            for(index_t j=simd_end; j<size; ++j)
+            {
+                *(dest+j) += (*(src1+j) + *(src2+j)) * a;
             }
         }
     #else
@@ -269,14 +321,12 @@ namespace xvigra
             vigra_precondition(in.shape() == out.shape(),
                 name + "(): shape mismatch between input and output.");
 
-            // padding_mode left_padding  = no_padding,  // FIXME: don't hard-wire padding
-            //              right_padding = no_padding;
             padding_mode left_padding  = options.left_padding[0], // FIXME: support dimension-wise padding
                          right_padding = options.right_padding[0];
 
             if(in.dimension() == 1)
             {
-                // std::cerr << "executing convolution along dimension 1.\n";
+                // execute convolution over right-most dimension
                 convolve_row(in.template view<1>(), out.template view<1>(), kernel,
                              options.simd, left_padding, right_padding);
             }
@@ -291,13 +341,13 @@ namespace xvigra
                 nav.set_free_axes(shape_t<>{0, (index_t)out.dimension()-1});
                 for(; nav.has_more(); ++nav)
                 {
-                    // std::cerr << "executing sideways convolution for dimension " << in.dimension() << ".\n";
-                    convolve_column(tmp.view(*nav).template view<2>(), out.view(*nav).template view<2>(),
-                                    kernel, options.simd, left_padding, right_padding);
+                    // execute convolution over left-most dimension, working
+                    // along rows in the inner loop
+                    convolve_columns(tmp.view(*nav).template view<2>(), out.view(*nav).template view<2>(),
+                                     kernel, options.simd, left_padding, right_padding);
                 }
             }
         }
-
         void convolve_row(view_nd<float, 1> && in, view_nd<float, 1> && out,
                           kernel_1d<float> const & kernel, bool use_simd,
                           padding_mode left_padding, padding_mode right_padding) const
@@ -474,9 +524,66 @@ namespace xvigra
             }
        }
 
-        void convolve_column(view_nd<float, 2> && in, view_nd<float, 2> && out,
-                             kernel_1d<float> const & kernel, bool use_simd,
-                             padding_mode left_padding, padding_mode right_padding) const
+
+        bool adjust_index_near_border(index_t & i, index_t size,
+                                      padding_mode left_padding, padding_mode right_padding) const
+        {
+            if(i < 0)
+            {
+                // left border adjustment
+                // never reached when left_padding == no_padding
+                if(left_padding == zero_padding)
+                {
+                    return false;
+                }
+                if(left_padding == reflect_padding)
+                {
+                    i = -i;
+                }
+                else if(left_padding == reflect0_padding)
+                {
+                    i = -i - 1;
+                }
+                else if(left_padding == periodic_padding)
+                {
+                    i += size;
+                }
+                else if(left_padding == repeat_padding)
+                {
+                    i = 0;
+                }
+            }
+            else if(i >= size)
+            {
+                // right border adjustment
+                // never reached when right_padding == no_padding
+                if(right_padding == zero_padding)
+                {
+                    return false;
+                }
+                if(right_padding == reflect_padding)
+                {
+                    i = 2*size - i - 2;
+                }
+                else if(right_padding == reflect0_padding)
+                {
+                    i = 2*size - i - 1;
+                }
+                else if(right_padding == periodic_padding)
+                {
+                    i -= size;
+                }
+                else if(right_padding == repeat_padding)
+                {
+                    i = size - 1;
+                }
+            }
+            return true;
+        }
+
+        void convolve_columns(view_nd<float, 2> && in, view_nd<float, 2> && out,
+                              kernel_1d<float> const & kernel, bool use_simd,
+                              padding_mode left_padding, padding_mode right_padding) const
         {
 #ifdef XVIGRA_USE_SIMD
             use_simd = use_simd && in.bind(0,0).is_contiguous() && out.bind(0,0).is_contiguous();
@@ -505,79 +612,63 @@ namespace xvigra
                     }
                 }
             }
-            for(index_t k=0; k<rev_kernel.size(); ++k)
+            for(index_t k=-left; k<=right; ++k)
             {
-                if(k==left)
+                if(k==0)
                 {
                     continue;
                 }
                 for(index_t j=start; j<end; ++j)
                 {
-                    index_t i = j + k - left;
-                    if(i < 0)
+                    index_t i = j + k;
+                    if(!adjust_index_near_border(i, in.shape(0), left_padding, right_padding))
                     {
-                        // left border treatment
-                        if(left_padding == reflect_padding)
-                        {
-                            i = -i;
-                        }
-                        else if(left_padding == zero_padding)
-                        {
-                            continue;
-                        }
-                        else if(left_padding == reflect0_padding)
-                        {
-                            i = -i - 1;
-                        }
-                        else if(left_padding == periodic_padding)
-                        {
-                            i += in.shape(0);
-                        }
-                        else if(left_padding == repeat_padding)
-                        {
-                            i = 0;
-                        }
-                    }
-                    else if(i >= in.shape(0))
-                    {
-                        // right border treatment
-                        if(right_padding == reflect_padding)
-                        {
-                            i = 2*in.shape(0) - i - 2;
-                        }
-                        else if(right_padding == zero_padding)
-                        {
-                            continue;
-                        }
-                        else if(right_padding == reflect0_padding)
-                        {
-                            i = 2*in.shape(0) - i - 1;
-                        }
-                        else if(right_padding == periodic_padding)
-                        {
-                            i -= in.shape(0);
-                        }
-                        else if(right_padding == repeat_padding)
-                        {
-                            i = in.shape(0) - 1;
-                        }
+                        continue;
                     }
 
                     // convolution of interior
                     if(use_simd)
                     {
-                        detail::simd_fma_row(&in(i,0), in.shape(1), &out(j,0), rev_kernel(k));
+                        detail::simd_fma_row(&in(i,0), in.shape(1), &out(j,0), rev_kernel(k+left));
                     }
                     else
                     {
                         // out.bind(0, j) += rev_kernel(k)*in.bind(0,i);
                         for(index_t l=0; l<in.shape(1); ++l)
                         {
-                            out(j,l) += rev_kernel(k)*in(i,l);
+                            out(j,l) += rev_kernel(k+left)*in(i,l);
                         }
                     }
                 }
             }
+            // // experimental: use symmetry of the kernel, speed advantage seem to be small
+            // for(index_t k=-left; k<0; ++k)
+            // {
+            //     for(index_t j=start; j<end; ++j)
+            //     {
+            //         index_t i1 = j + k,
+            //                 i2 = j - k;
+            //         if(!adjust_index_near_border(i1, in.shape(0), left_padding, right_padding) ||
+            //            !adjust_index_near_border(i2, in.shape(0), left_padding, right_padding))
+            //         {
+            //             continue;
+            //         }
+
+            //         // convolution of interior
+            //         if(use_simd)
+            //         {
+            //             detail::simd_fma_row_symmetric(&in(i1,0), &in(i2,0), in.shape(1), &out(j,0), rev_kernel(k+left));
+            //         }
+            //         else
+            //         {
+            //             // out.bind(0, j) += rev_kernel(k)*(in.bind(0,i1)+in.bind(0,i2));
+            //             for(index_t l=0; l<in.shape(1); ++l)
+            //             {
+            //                 out(j,l) += rev_kernel(k+left)*(in(i1,l) + in(i2,l));
+            //             }
+            //         }
+            //     }
+            // }
         }
     };
 
