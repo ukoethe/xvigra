@@ -611,64 +611,57 @@ namespace xvigra
                         out(j,l) = rev_kernel(left)*in(j,l);
                     }
                 }
-            }
-            for(index_t k=-left; k<=right; ++k)
-            {
-                if(k==0)
+                for(index_t k=-left; k<=right; ++k)
                 {
-                    continue;
-                }
-                for(index_t j=start; j<end; ++j)
-                {
+                    if(k==0)
+                    {
+                        continue;
+                    }
                     index_t i = j + k;
                     if(!adjust_index_near_border(i, in.shape(0), left_padding, right_padding))
                     {
                         continue;
                     }
 
-                    // convolution of interior
                     if(use_simd)
                     {
                         detail::simd_fma_row(&in(i,0), in.shape(1), &out(j,0), rev_kernel(k+left));
                     }
                     else
                     {
-                        // out.bind(0, j) += rev_kernel(k)*in.bind(0,i);
+                        // out.bind(0, j) += rev_kernel(k+left)*in.bind(0,i);
                         for(index_t l=0; l<in.shape(1); ++l)
                         {
                             out(j,l) += rev_kernel(k+left)*in(i,l);
                         }
                     }
                 }
-            }
-            // // experimental: use symmetry of the kernel, speed advantage seem to be small
-            // for(index_t k=-left; k<0; ++k)
-            // {
-            //     for(index_t j=start; j<end; ++j)
-            //     {
-            //         index_t i1 = j + k,
-            //                 i2 = j - k;
-            //         if(!adjust_index_near_border(i1, in.shape(0), left_padding, right_padding) ||
-            //            !adjust_index_near_border(i2, in.shape(0), left_padding, right_padding))
-            //         {
-            //             continue;
-            //         }
+                // // experimental: use symmetry of the kernel, minimal speed advantage (within measurement noise)
+                // for(index_t k=-left; k<0; ++k)
+                // {
+                //     index_t i1 = j + k,
+                //             i2 = j - k;
+                //     if(!adjust_index_near_border(i1, in.shape(0), left_padding, right_padding) ||
+                //        !adjust_index_near_border(i2, in.shape(0), left_padding, right_padding))
+                //     {
+                //         continue;
+                //     }
 
-            //         // convolution of interior
-            //         if(use_simd)
-            //         {
-            //             detail::simd_fma_row_symmetric(&in(i1,0), &in(i2,0), in.shape(1), &out(j,0), rev_kernel(k+left));
-            //         }
-            //         else
-            //         {
-            //             // out.bind(0, j) += rev_kernel(k)*(in.bind(0,i1)+in.bind(0,i2));
-            //             for(index_t l=0; l<in.shape(1); ++l)
-            //             {
-            //                 out(j,l) += rev_kernel(k+left)*(in(i1,l) + in(i2,l));
-            //             }
-            //         }
-            //     }
-            // }
+                //     // convolution of interior
+                //     if(use_simd)
+                //     {
+                //         detail::simd_fma_row_symmetric(&in(i1,0), &in(i2,0), in.shape(1), &out(j,0), rev_kernel(k+left));
+                //     }
+                //     else
+                //     {
+                //         // out.bind(0, j) += rev_kernel(k)*(in.bind(0,i1)+in.bind(0,i2));
+                //         for(index_t l=0; l<in.shape(1); ++l)
+                //         {
+                //             out(j,l) += rev_kernel(k+left)*(in(i1,l) + in(i2,l));
+                //         }
+                //     }
+                // }
+            }
         }
     };
 
