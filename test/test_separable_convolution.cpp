@@ -93,8 +93,8 @@ namespace xvigra
     TEST(separable_convolution, 2d_gauss_filter)
     {
         auto && kernel = gaussian_kernel_1d<float>(2.0);
-        array_nd<float> in = read_image("color_image.tif"),
-                        out(in.shape(), 0);
+        auto && in = read_image("color_image.tif");
+        std::decay_t<decltype(in)> out(in.shape(), 0);
         separable_convolution(2_d, in, out, kernel);
         write_image("smooth.png", out);
     }

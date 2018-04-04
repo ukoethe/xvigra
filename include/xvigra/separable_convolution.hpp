@@ -82,6 +82,36 @@ namespace xvigra
             right_padding = right;
             return *this;
         }
+
+        padding_mode get_left_padding(index_t d) const
+        {
+            if(left_padding.size() == 0)
+            {
+                return reflect_padding;
+            }
+            if(left_padding.size() == 1)
+            {
+                return left_padding[0];
+            }
+            vigra_precondition(0 <= d && d < left_padding.size(),
+                "convolution_options.get_left_padding(d): requested dimension out of bounds.");
+            return left_padding[d];
+        }
+
+        padding_mode get_right_padding(index_t d) const
+        {
+            if(right_padding.size() == 0)
+            {
+                return reflect_padding;
+            }
+            if(right_padding.size() == 1)
+            {
+                return right_padding[0];
+            }
+            vigra_precondition(0 <= d && d < right_padding.size(),
+                "convolution_options.get_right_padding(d): requested dimension out of bounds.");
+            return right_padding[d];
+        }
     };
 
     /******************************/
@@ -91,37 +121,16 @@ namespace xvigra
     namespace detail
     {
 
-        template <index_t N1, index_t N2, class Kernel>
-        inline void dot(view_nd<float, N1> in, view_nd<float, N2> out, Kernel const & kernel, bool use_simd)
+        template <class T1, index_t N1, class T2, index_t N2, class Kernel>
+        inline void convolve_row(view_nd<T1, N1> in, view_nd<T2, N2> out, Kernel const & kernel)
         {
-    #ifndef XVIGRA_USE_SIMD
-            index_t simd_end = 0;
-    #else
-            use_simd = use_simd && in.is_contiguous() && out.is_contiguous();
-
-            auto k = xsimd::set_simd(kernel(0));
-            constexpr index_t simd_size = decltype(k)::size;
-            index_t simd_end = (use_simd) ? out.shape(0) -  out.shape(0) % simd_size : 0;
-            for(index_t j=0; j<simd_end; j += simd_size)
-            {
-                (k * xsimd::load_unaligned(&in(j))).store_unaligned(&out(j));
-            }
-            for(index_t l=1; l<kernel.shape(0); ++l)
-            {
-                auto k = xsimd::set_simd(kernel(l));
-                for(index_t j=0; j<simd_end; j += simd_size)
-                {
-                    fma(k, xsimd::load_unaligned(&in(j+l)), xsimd::load_unaligned(&out(j))).store_unaligned(&out(j));
-                }
-            }
-    #endif
-            for(index_t j=simd_end; j<out.shape(0); ++j)
+            for(index_t j=0; j<out.shape(0); ++j)
             {
                 out(j) = in(j)*kernel(0);
             }
             for(index_t l=1; l<kernel.shape(0); ++l)
             {
-                for(index_t j=simd_end; j<out.shape(0); ++j)
+                for(index_t j=0; j<out.shape(0); ++j)
                 {
                     out(j) += in(j+l)*kernel(l);
                 }
@@ -131,17 +140,15 @@ namespace xvigra
 
     } // namespace detail
 
-    template <index_t N1, index_t N2>
-    void slow_separable_convolution(view_nd<float, N1> in, view_nd<float, N2> out,
-                                    kernel_1d<float> const & kernel,
+    template <class T1, index_t N1, class T2, index_t N2, class T3>
+    void slow_separable_convolution(view_nd<T1, N1> in, view_nd<T2, N2> out,
+                                    kernel_1d<T3> const & kernel,
                                     convolution_options const & options = convolution_options())
     {
         using namespace slicing;
         auto rev_kernel = kernel.view(slice(_,_,-1));
         index_t right = kernel.center(),
                 left  = kernel.size() - right - 1;
-        padding_mode left_padding  = options.left_padding[0], // FIXME: support dimension-wise padding
-                     right_padding = options.right_padding[0];
 
         index_t N = in.dimension();
 
@@ -149,11 +156,13 @@ namespace xvigra
         {
             // operate on last dimension first
             nav.set_free_axes(N-1);
-            array_nd<float, 1> padded(shape_t<1>{in.shape(N-1)+left+right});
+            padding_mode left_padding  = options.get_left_padding(N-1),
+                         right_padding = options.get_right_padding(N-1);
+            array_nd<T2, 1> padded(shape_t<1>{in.shape(N-1)+left+right});
             for(; nav.has_more(); ++nav)
             {
                 copy_with_padding(in.view(*nav), padded, left_padding, left, right_padding, right);
-                detail::dot(padded, out.view(*nav), rev_kernel, options.simd);
+                detail::convolve_row(padded, out.view(*nav), rev_kernel);
             }
         }
 
@@ -161,11 +170,13 @@ namespace xvigra
         {
             // operate on further dimensions
             nav.set_free_axes(d);
-            array_nd<float, 1> padded(shape_t<1>{out.shape(d)+left+right});
+            padding_mode left_padding  = options.get_left_padding(d),
+                         right_padding = options.get_right_padding(d);
+            array_nd<T2, 1> padded(shape_t<1>{out.shape(d)+left+right});
             for(; nav.has_more(); ++nav)
             {
                 copy_with_padding(out.view(*nav), padded, left_padding, left, right_padding, right);
-                detail::dot(padded, out.view(*nav), rev_kernel, options.simd);
+                detail::convolve_row(padded, out.view(*nav), rev_kernel);
             }
         }
     }
@@ -178,7 +189,9 @@ namespace xvigra
     {
 
     #if XVIGRA_USE_SIMD
-        inline void simd_mul_row(float const * src, index_t size, float * dest, float a)
+        template <class T,
+                  VIGRA_REQUIRE<std::is_floating_point<T>::value>>
+        inline void simd_mul_row(T const * src, index_t size, T * dest, T a)
         {
             auto ba = xsimd::set_simd(a);
 
@@ -205,7 +218,9 @@ namespace xvigra
             }
         }
 
-        inline void simd_fma_row(float const * src, index_t size, float * dest, float a)
+        template <class T,
+                  VIGRA_REQUIRE<std::is_floating_point<T>::value>>
+        inline void simd_fma_row(T const * src, index_t size, T * dest, T a)
         {
             auto ba = xsimd::set_simd(a);
 
@@ -231,48 +246,25 @@ namespace xvigra
                 *(dest+j) += *(src+j) * a;
             }
         }
-
-        inline void simd_fma_row_symmetric(float const * src1, float const * src2,
-                                           index_t size, float * dest, float a)
-        {
-            auto ba = xsimd::set_simd(a);
-
-            constexpr index_t simd_size = xsimd::simd_batch_traits<decltype(ba)>::size;
-            constexpr std::size_t align_bits = xsimd::simd_batch_traits<decltype(ba)>::align - 1;
-
-           for(; size>0; --size, ++dest, ++src1, ++src2)
-            {
-                if(((std::size_t)dest & align_bits) == 0)
-                {
-                    break; // dest is SIMD-aligned
-                }
-                *dest += (*src1 + *src2) * a;
-            }
-
-            index_t simd_end = size - size % simd_size;
-            for(index_t j=0; j<simd_end; j += simd_size)
-            {
-                xsimd::fma(ba, xsimd::load_unaligned(src1+j) +xsimd::load_unaligned(src2+j), xsimd::load_aligned(dest+j)).store_aligned(dest+j);
-            }
-            for(index_t j=simd_end; j<size; ++j)
-            {
-                *(dest+j) += (*(src1+j) + *(src2+j)) * a;
-            }
-        }
     #else
-        inline void simd_mul_row(float const * src, index_t size, float * dest, float a)
+        template <class T1, class T2, class T3>
+        inline void simd_mul_row(T1 const * src, index_t size, T2 * dest, T3 a)
         {
-            vigra_fail("internal error: SIMD called while XVIGRA_USE_SIMD is inactive.");
+            vigra_fail("internal error: invalid call to SIMD function.");
         }
 
-        inline void simd_fma_row(float const * src, index_t size, float * dest, float a)
+        template <class T1, class T2, class T3>
+        inline void simd_fma_row(T1 const * src, index_t size, T2 * dest, T3 a)
         {
-            vigra_fail("internal error: SIMD called while XVIGRA_USE_SIMD is inactive.");
+            vigra_fail("internal error: invalid call to SIMD function.");
         }
     #endif
 
     } // namespace detail
 
+        // introduction of convolve_columns gives a 5x speed-up
+        // SIMD gives another 3x
+        // taking advantage of the kernel symmetry has negligible effect
     struct separable_convolution_functor
     {
         std::string name = "separable_convolution";
@@ -282,7 +274,7 @@ namespace xvigra
         {
             auto && a1 = eval_expr(std::forward<E1>(e1));
             auto && a2 = eval_expr(std::forward<E2>(e2));
-            impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
+            impl(0, make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
         }
 
         template <class E1, class E2, class ... ARGS>
@@ -296,7 +288,7 @@ namespace xvigra
 
             if((index_t)a1.dimension() == dim)
             {
-                impl(make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
+                impl(0, make_view(a1), make_view(a2), std::forward<ARGS>(a)...);
             }
             // else if(a1.strides(dim) == 1 && a2.strides(dim) == 1)
             // {
@@ -308,34 +300,47 @@ namespace xvigra
                 auto && v2 = make_view(a2);
                 for(index_t k=0; k<v1.shape(dim); ++k)
                 {
-                    impl(v1.bind(dim, k), v2.bind(dim, k), std::forward<ARGS>(a)...);
+                    impl(0, v1.bind(dim, k), v2.bind(dim, k), std::forward<ARGS>(a)...);
                 }
             }
         }
 
-        template <index_t N1, index_t N2>
-        void impl(view_nd<float, N1> in, view_nd<float, N2> out,
-                  kernel_1d<float> const & kernel,
+        template <class T1, index_t N1, class T2, index_t N2, class T3>
+        void impl(index_t dim, view_nd<T1, N1> in, view_nd<T2, N2> out,
+                  kernel_1d<T3> const & kernel,
+                  convolution_options const & options = convolution_options()) const
+        {
+            impl(dim, std::move(in), std::move(out),
+                 std::vector<kernel_1d<T3>>(in.dimension(), kernel), options);
+        }
+
+        template <class T1, index_t N1, class T2, index_t N2, class Kernels,
+                  VIGRA_REQUIRE<kernel_1d_concept<typename std::decay_t<Kernels>::value_type>::value>>
+        void impl(index_t dim, view_nd<T1, N1> in, view_nd<T2, N2> out,
+                  Kernels && kernels,
                   convolution_options const & options = convolution_options()) const
         {
             vigra_precondition(in.shape() == out.shape(),
                 name + "(): shape mismatch between input and output.");
+            vigra_precondition(dim > 0 || kernels.size() == in.dimension(),
+                name + "(): number of kernels doesn't match data dimension.");
 
-            padding_mode left_padding  = options.left_padding[0], // FIXME: support dimension-wise padding
-                         right_padding = options.right_padding[0];
+            padding_mode left_padding  = options.get_left_padding(dim),
+                         right_padding = options.get_right_padding(dim);
 
             if(in.dimension() == 1)
             {
                 // execute convolution over right-most dimension
-                convolve_row(in.template view<1>(), out.template view<1>(), kernel,
+                convolve_row(in.template view<1>(), out.template view<1>(), kernels[dim],
                              options.simd, left_padding, right_padding);
             }
             else
             {
-                array_nd<float> tmp(in.shape()); // FIXME: use less tmp memory
+                using tmp_type = std::conditional_t<std::is_integral<T1>::value, float, T1>;
+                array_nd<tmp_type> tmp(in.shape()); // FIXME: use less tmp memory
                 for(index_t k=0; k<in.shape(0); ++k)
                 {
-                    impl(in.bind(0,k), tmp.bind(0,k), kernel, options);
+                    impl(dim+1, in.bind(0,k), tmp.bind(0,k), kernels, options);
                 }
                 slicer nav(out.shape());
                 nav.set_free_axes(shape_t<>{0, (index_t)out.dimension()-1});
@@ -344,16 +349,19 @@ namespace xvigra
                     // execute convolution over left-most dimension, working
                     // along rows in the inner loop
                     convolve_columns(tmp.view(*nav).template view<2>(), out.view(*nav).template view<2>(),
-                                     kernel, options.simd, left_padding, right_padding);
+                                     kernels[dim], options.simd, left_padding, right_padding);
                 }
             }
         }
-        void convolve_row(view_nd<float, 1> && in, view_nd<float, 1> && out,
-                          kernel_1d<float> const & kernel, bool use_simd,
+
+        template <class T1, class T2, class T3>
+        void convolve_row(view_nd<T1, 1> && in, view_nd<T2, 1> && out,
+                          kernel_1d<T3> const & kernel, bool use_simd,
                           padding_mode left_padding, padding_mode right_padding) const
         {
 #ifdef XVIGRA_USE_SIMD
-            use_simd = use_simd && out.is_contiguous();
+            use_simd = use_simd && out.is_contiguous() &&
+                       std::is_same<T1, T2>::value && std::is_floating_point<T1>::value;
 #else
             use_simd = false;
 #endif
@@ -401,6 +409,7 @@ namespace xvigra
             }
             else
             {
+                // for(index_t k=-left; k<0; ++k)
                 for(index_t k=-left; k<=right; ++k)
                 {
                     if(k==0)
@@ -509,6 +518,7 @@ namespace xvigra
                         // invariants: left_padding == no_padding || right_padding == no_padding
                         if(use_simd)
                         {
+                            // detail::simd_fma_row_symmetric(&in(start+k), &in(start-k), end-start, &out(start), rev_kernel(k+left));
                             detail::simd_fma_row(&in(start+k), end-start, &out(start), rev_kernel(k+left));
                         }
                         else
@@ -581,12 +591,15 @@ namespace xvigra
             return true;
         }
 
-        void convolve_columns(view_nd<float, 2> && in, view_nd<float, 2> && out,
-                              kernel_1d<float> const & kernel, bool use_simd,
+        template <class T1, class T2, class T3>
+        void convolve_columns(view_nd<T1, 2> && in, view_nd<T2, 2> && out,
+                              kernel_1d<T3> const & kernel, bool use_simd,
                               padding_mode left_padding, padding_mode right_padding) const
         {
 #ifdef XVIGRA_USE_SIMD
-            use_simd = use_simd && in.bind(0,0).is_contiguous() && out.bind(0,0).is_contiguous();
+            use_simd = use_simd &&
+                       in.bind(0,0).is_contiguous() && out.bind(0,0).is_contiguous() &&
+                       std::is_same<T1, T2>::value && std::is_floating_point<T1>::value;
 #else
             use_simd = false;
 #endif
@@ -620,7 +633,7 @@ namespace xvigra
                     index_t i = j + k;
                     if(!adjust_index_near_border(i, in.shape(0), left_padding, right_padding))
                     {
-                        continue;
+                        continue; // if zero_padding
                     }
 
                     if(use_simd)
