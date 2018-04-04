@@ -89,6 +89,8 @@ namespace xvigra
 
         struct view_nd_tag {};
 
+        struct kernel_1d_tag {};
+
         struct skip_initialization_tag {};
 
         using memory_order = xt::layout_type;

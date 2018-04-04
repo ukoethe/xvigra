@@ -169,6 +169,15 @@ namespace xvigra
     {};
 
     /*********************/
+    /* kernel_1d_concept */
+    /*********************/
+
+    template <class T>
+    struct kernel_1d_concept
+    : public std::is_base_of<tags::kernel_1d_tag, std::decay_t<T>>
+    {};
+
+    /*********************/
     /* iterator concepts */
     /*********************/
 
